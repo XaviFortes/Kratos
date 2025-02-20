@@ -1,4 +1,5 @@
 import prisma from '../../lib/prisma'
+import { calculatePrice } from '~/server/services/pricingServices'
 import jwt from 'jsonwebtoken'
 
 export default defineEventHandler(async (event) => {
@@ -47,10 +48,19 @@ export default defineEventHandler(async (event) => {
     }
 
     // Show items
-    console.log('Items:', body.line_items)
+    // console.log('Items:', body.line_items)
+
+    console.log('Body:', body)
+
+    const { total, lineItems } = await calculatePrice(body.gameSlug, body.config)
+
+    console.log('Calculated cost:', total)
+
+    // Temp end
+    // return
 
     // Create Invoice Ninja invoice
-    const invoice = await $fetch('https://invoice.inovexservices.com/api/v1/invoices', {
+    const invoice = await $fetch('https://invoice.inovexservices.com/api/v1/recurring_invoices', {
       method: 'POST',
       headers: {
         'X-API-TOKEN': process.env.INVOICE_NINJA_TOKEN,
@@ -63,21 +73,40 @@ export default defineEventHandler(async (event) => {
         due_date: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000) // 7 days from now
           .toISOString()
           .split('T')[0],
-        line_items: body.line_items.map(item => ({
+        line_items: lineItems.map(item => ({
           product_key: item.product_key,
           notes: item.notes,
-          cost: item.cost,
-          quantity: item.quantity,
-          tax_name1: "VAT", // Add if needed
-          tax_rate1: 0 // Add tax rate if applicable
-        })),
+          cost: item.cost.toFixed(2),
+          quantity: 1, // All items are quantity 1
+          tax_name1: "VAT",
+          tax_rate1: 0
+        })),  
         terms: "Payment due within 7 days",
         footer: "Thank you for your business!",
+        frequency_id: 5, // Monthly. 1- Daily 2- Weekly 3- Bi-weekly 4- Four-weekly 5- Monthly 6- Two-monthly 7- Quarterly 8- Four-monthly 9- Six-monthly 10- Annually
+        remaining_cycles: -1, // Infinite
         partial: 0,
-        auto_bill: true
+        auto_bill: "Always",
+        auto_bill_enabled: true,
 
       }
     })
+
+    // Action start recurring invoice
+    const startInvoice = await $fetch(`https://invoice.inovexservices.com/api/v1/recurring_invoices/bulk`, {
+      method: 'POST',
+      headers: {
+        'X-API-TOKEN': process.env.INVOICE_NINJA_TOKEN,
+        'X-Requested-With': 'XMLHttpRequest',
+        'Content-Type': 'application/json'
+      },
+      body: {
+        action: 'send_now',
+        ids: [invoice.data.id]
+      }
+    })
+
+    console.log('Invoice Start:', startInvoice)
 
     // Save invoice to database
     const dbInvoice = await prisma.invoices.create({

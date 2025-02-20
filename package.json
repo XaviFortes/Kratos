@@ -9,6 +9,9 @@
     "preview": "nuxt preview",
     "postinstall": "nuxt prepare"
   },
+  "prisma": {
+    "seed": "tsx prisma/seed.ts"
+  },
   "dependencies": {
     "@nuxt/icon": "^1.10.3",
     "@nuxt/image": "^1.9.0",
@@ -16,7 +19,7 @@
     "@nuxtjs/tailwindcss": "^6.13.1",
     "@parcel/watcher": "2.5.1",
     "@pinia/nuxt": "^0.10.1",
-    "@prisma/client": "^6.3.1",
+    "@prisma/client": "^6.4.0",
     "bcrypt": "^5.1.1",
     "core-js": "2.6.12",
     "jsonwebtoken": "^9.0.2",
@@ -38,5 +41,10 @@
       "prisma",
       "sharp"
     ]
+  },
+  "devDependencies": {
+    "@types/node": "^22.13.4",
+    "ts-node": "^10.9.2",
+    "typescript": "^5.7.3"
   }
 }

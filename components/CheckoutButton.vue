@@ -11,12 +11,39 @@
   </template>
   
   <script setup>
+  const props = defineProps({
+    game: {
+      type: Object,
+      required: true
+    },
+    config: {
+      type: Object,
+      required: true
+    },
+    totalPrice: {
+      type: Number,
+      required: true
+    }
+  });
   const cart = useCartStore()
   const auth = useAuthStore()
   const router = useRouter()
   const processing = ref(false)
+  const addToCart = () => {
+    cart.addItem({
+      game: props.game,
+      config: props.config,
+      total: props.totalPrice
+    })
+  }
+
+
   
   const handleCheckout = async () => {
+    cart.removeAllItems()
+    addToCart()
+    console.log('Proceeding to checkout...')
+    console.log('Cart items:', cart.items)
     try {
       processing.value = true
       
@@ -39,24 +66,38 @@
   }
   
   const proceedToPayment = async () => {
+    if (!cart.items?.length) {
+      throw new Error('Cart is empty. Please add items before checkout.')
+    }
   // Prepare invoice data with proper line items
-  const invoiceData = {
-    client_id: auth.user.invoiceNinjaId,
-    line_items: cart.items.map(item => ({
-      product_key: item.game.slug,
-      notes: `Game Server: ${item.config.ram}GB RAM, ${item.config.cpu} Cores`,
-      cost: item.total,
-      quantity: 1,
-      tax_rate1: 0
-    })),
-    terms: "Your server will be provisioned after payment confirmation",
-    footer: "Thank you for your purchase!"
-  }
+  // const invoiceData = {
+  //   client_id: auth.user.invoiceNinjaId,
+  //   gameSlug: props.game.slug,
+  //   line_items: cart.items.map(item => ({
+  //     product_key: item.game.slug,
+  //     notes: `Game Server: ${item.config.ram}GB RAM, ${item.config.cpu} Cores`,
+  //     cost: item.total,
+  //     quantity: 1,
+  //     tax_rate1: 0
+  //   })),
+  //   terms: "Your server will be provisioned after payment confirmation",
+  //   footer: "Thank you for your purchase!"
+  // }
+  // console.log('Invoice Data:', invoiceData)
+  // return
+
+    // Send the config directly
+    const configData = {
+      gameSlug: props.game.slug,
+      config: props.config,
+      // items: cart.items
+    }
 
   // Create invoice with proper headers
   const { data, error } = await useFetch('/api/invoices/create', {
     method: 'POST',
-    body: invoiceData,
+    // body: invoiceData,
+    body: configData,
     headers: {
       Authorization: `Bearer ${auth.token}`,
       'Content-Type': 'application/json' // Explicit content type
