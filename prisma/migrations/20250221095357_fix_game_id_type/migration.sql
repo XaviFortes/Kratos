@@ -9,6 +9,7 @@ CREATE TABLE "invoices" (
     "metadata" JSONB,
     "created_at" TIMESTAMP(6) DEFAULT CURRENT_TIMESTAMP,
     "updated_at" TIMESTAMP(6) DEFAULT CURRENT_TIMESTAMP,
+    "game_id" UUID,
 
     CONSTRAINT "invoices_pkey" PRIMARY KEY ("id")
 );
@@ -43,10 +44,10 @@ CREATE TABLE "users" (
 
 -- CreateTable
 CREATE TABLE "Game" (
-    "id" TEXT NOT NULL,
+    "id" UUID NOT NULL DEFAULT gen_random_uuid(),
     "name" TEXT NOT NULL,
     "slug" TEXT NOT NULL,
-    "basePrice" DECIMAL(65,30) NOT NULL,
+    "basePrice" DECIMAL(10,2) NOT NULL,
     "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "updatedAt" TIMESTAMP(3) NOT NULL,
 
@@ -55,12 +56,12 @@ CREATE TABLE "Game" (
 
 -- CreateTable
 CREATE TABLE "PricingTier" (
-    "id" TEXT NOT NULL,
-    "gameId" TEXT NOT NULL,
+    "id" TEXT NOT NULL DEFAULT gen_random_uuid(),
+    "gameId" UUID NOT NULL,
     "type" TEXT NOT NULL,
     "label" TEXT NOT NULL,
     "value" TEXT NOT NULL,
-    "price" DECIMAL(65,30) NOT NULL,
+    "price" DECIMAL(10,2) NOT NULL,
     "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "updatedAt" TIMESTAMP(3) NOT NULL,
 
@@ -69,11 +70,11 @@ CREATE TABLE "PricingTier" (
 
 -- CreateTable
 CREATE TABLE "PriceModifier" (
-    "id" TEXT NOT NULL,
-    "gameId" TEXT NOT NULL,
+    "id" TEXT NOT NULL DEFAULT gen_random_uuid(),
+    "gameId" UUID NOT NULL,
     "type" TEXT NOT NULL,
     "condition" JSONB,
-    "value" DECIMAL(65,30) NOT NULL,
+    "value" DECIMAL(10,2) NOT NULL,
     "description" TEXT NOT NULL,
     "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "updatedAt" TIMESTAMP(3) NOT NULL,
@@ -86,6 +87,9 @@ CREATE INDEX "idx_invoices_status" ON "invoices"("status");
 
 -- CreateIndex
 CREATE INDEX "idx_invoices_user_id" ON "invoices"("user_id");
+
+-- CreateIndex
+CREATE UNIQUE INDEX "invoices_invoice_ninja_id_key" ON "invoices"("invoice_ninja_id");
 
 -- CreateIndex
 CREATE INDEX "idx_servers_user_id" ON "servers"("user_id");
@@ -104,6 +108,9 @@ ALTER TABLE "invoices" ADD CONSTRAINT "invoices_server_id_fkey" FOREIGN KEY ("se
 
 -- AddForeignKey
 ALTER TABLE "invoices" ADD CONSTRAINT "invoices_user_id_fkey" FOREIGN KEY ("user_id") REFERENCES "users"("id") ON DELETE CASCADE ON UPDATE NO ACTION;
+
+-- AddForeignKey
+ALTER TABLE "invoices" ADD CONSTRAINT "invoices_game_id_fkey" FOREIGN KEY ("game_id") REFERENCES "Game"("id") ON DELETE SET NULL ON UPDATE CASCADE;
 
 -- AddForeignKey
 ALTER TABLE "servers" ADD CONSTRAINT "servers_user_id_fkey" FOREIGN KEY ("user_id") REFERENCES "users"("id") ON DELETE CASCADE ON UPDATE NO ACTION;

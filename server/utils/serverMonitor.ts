@@ -1,19 +1,21 @@
+import prisma from "../lib/prisma"
+
 // server/utils/serverMonitor.ts
 export async function checkServerInstallation() {
-    const installingServers = await prisma.server.findMany({
+    const installingServers = await prisma.servers.findMany({
       where: { status: 'installing' }
     })
   
     for (const server of installingServers) {
       const serverStatus = await $fetch(
-        `${process.env.PTERODACTYL_URL}/api/application/servers/${server.pterodactyl_id}`,
+        `${process.env.PTERODACTYL_URL}/api/application/servers/${server.pterodactyl_server_id}`,
         {
           headers: {
             Authorization: `Bearer ${process.env.PTERODACTYL_API_KEY}`
           }
         }
       )
-  
+        /*
       if (serverStatus.attributes.status === 'running') {
         await prisma.server.update({
           where: { id: server.id },
@@ -25,6 +27,7 @@ export async function checkServerInstallation() {
           port: serverStatus.attributes.allocation.port
         })
       }
+      */
     }
   }
   
