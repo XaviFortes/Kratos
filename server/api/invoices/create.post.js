@@ -59,8 +59,41 @@ export default defineEventHandler(async (event) => {
     // Temp end
     // return
 
+    // Generate a Project Order Number (PO-XXXXX)
+    const poNumber = `PO-${Date.now().toString(36).toUpperCase()}`;
+
+    // Get game details
+    const game = await prisma.game.findUnique({
+      where: { slug: body.gameSlug },
+      select: { id: true }
+    });
+
+    if (!game) throw createError({ statusCode: 404, message: 'Game not found' });
+
+    // Create server first (if not already existing)
+    const server = await prisma.servers.create({
+      data: {
+        user_id: user.id,
+        game_type: body.gameSlug,
+        config: body.config,
+        status: 'pending'
+      }
+    });
+
+    // Create project order
+    const order = await prisma.order.create({
+      data: {
+        user_id: user.id,
+        server_id: server.id,
+        game_id: game.id,
+        po_number: poNumber,
+        billing_cycle: 'MONTHLY',
+        status: 'ACTIVE'
+      }
+    });
+
     // Create Invoice Ninja invoice
-    const invoice = await $fetch('https://invoice.inovexservices.com/api/v1/recurring_invoices', {
+    const recurringInvoice = await $fetch('https://invoice.inovexservices.com/api/v1/recurring_invoices', {
       method: 'POST',
       headers: {
         'X-API-TOKEN': process.env.INVOICE_NINJA_TOKEN,
@@ -73,6 +106,7 @@ export default defineEventHandler(async (event) => {
         due_date: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000) // 7 days from now
           .toISOString()
           .split('T')[0],
+        po_number: poNumber,
         line_items: lineItems.map(item => ({
           product_key: item.product_key,
           notes: item.notes,
@@ -102,24 +136,34 @@ export default defineEventHandler(async (event) => {
       },
       body: {
         action: 'send_now',
-        ids: [invoice.data.id]
+        ids: [recurringInvoice.data.id]
       }
     })
 
     console.log('Invoice Start:', startInvoice)
 
+    const invoice = await $fetch(`https://invoice.inovexservices.com/api/v1/invoices?client_id=${user.invoice_ninja_client_id
+
+    }`, {
+      method: 'GET',
+      headers: {
+        'X-API-TOKEN': process.env.INVOICE_NINJA_TOKEN,
+        'X-Requested-With': 'XMLHttpRequest'
+      }
+    })
+
     // Save invoice to database
     const dbInvoice = await prisma.invoices.create({
       data: {
         user_id: user.id,
-        invoice_ninja_id: invoice.data.id,
-        amount: invoice.data.amount,
+        invoice_ninja_id: recurringInvoice.data.id,
+        amount: recurringInvoice.data.amount,
         status: 'pending'
       }
     })
 
     return {
-      payment_url: invoice.data.invitations[0].link,
+      payment_url: recurringInvoice.data.invitations[0].link,
       invoice_id: dbInvoice.id
     }
 

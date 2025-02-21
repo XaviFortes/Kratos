@@ -89,6 +89,6 @@ export async function getGame(gameSlug: string) {
       }
     })
     if (!game) throw new Error('Game not found');
-    console.log('Get game api res: ', game)
+    // console.log('Get game api res: ', game)
     return game
 }
