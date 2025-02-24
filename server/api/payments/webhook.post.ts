@@ -35,6 +35,15 @@ export default defineEventHandler(async (event) => {
       throw createError({ statusCode: 404, statusMessage: 'Invoice not found' });
     }
     console.log('Invoice found:', invoice)
+
+    // Update the invoice status
+    await prisma.invoices.update({
+        where: { invoice_ninja_id: invoiceId },
+        data: { status: 'paid' }
+    });
+    console.log('Invoice updated')
+
+    
   
     // // Handle payment success
     // if (body.event_type === 'payment_success') {

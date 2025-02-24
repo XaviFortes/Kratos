@@ -1,5 +1,6 @@
 <!-- app.vue -->
 <template>
+  <!-- <AuthLoader /> -->
   <div>
     <NuxtLayout>
       <NuxtPage />

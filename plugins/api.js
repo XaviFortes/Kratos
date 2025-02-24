@@ -1,6 +1,7 @@
 export default defineNuxtPlugin(() => {
     const config = useRuntimeConfig();
 
+
     const $api = {
         // Pterodactyl API
         async createServer(serverData) {

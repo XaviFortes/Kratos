@@ -28,6 +28,10 @@ async function seed() {
             { type: 'cpu', label: '4 Cores', value: '4', price: 2 },
             { type: 'cpu', label: '8 Cores', value: '8', price: 4 },
             { type: 'cpu', label: '16 Cores', value: '16', price: 8 },
+            // Disk Tiers
+            { type: 'storage', label: '50GB', value: '50', price: 0 },
+            { type: 'storage', label: '100GB', value: '100', price: 1 },
+            { type: 'storage', label: '200GB', value: '200', price: 2 },
             // Extras
             { type: 'extra', label: 'Dedicated IP', value: 'true', price: 2 },
             { type: 'extra', label: 'Dedicated Server', value: 'true', price: 5 }

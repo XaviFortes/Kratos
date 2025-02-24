@@ -1,6 +1,21 @@
 // https://nuxt.com/docs/api/configuration/nuxt-config
 export default defineNuxtConfig({
+  plugins: [
+    '~/plugins/auth.client.js',
+  ],
   compatibilityDate: '2024-11-01',
+  routeRules: {
+    // Public pages
+    '/': { ssr: true },
+    '/about': { ssr: true },
+    '/contact': { ssr: true },
+    
+    // Auth pages
+    '/auth/**': { ssr: false },
+    
+    // Protected pages
+    //'/dashboard/**': { middleware: 'auth' }
+  },
   devtools: {
     enabled: true,
 
@@ -8,7 +23,14 @@ export default defineNuxtConfig({
       enabled: true,
     },
   },
-  modules: ['@pinia/nuxt', '@nuxtjs/tailwindcss', '@nuxt/image', '@nuxt/icon'],
+  modules: [
+    ['@pinia/nuxt', { autoImports: ['defineStore'] }],
+    'pinia-plugin-persistedstate/nuxt', // Add persisted state
+     '@nuxtjs/tailwindcss', '@nuxt/image', '@nuxt/icon'
+  ],
+  piniaPersistedstate: {
+    storage: 'localStorage'
+  },
   components: [
     {
       path: '~/components',
@@ -37,7 +59,4 @@ export default defineNuxtConfig({
       }
     }
   },
-  plugins: [
-    '~/plugins/auth.client.js',
-  ],
 })

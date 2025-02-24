@@ -76,19 +76,8 @@ export default defineEventHandler(async (event) => {
         user_id: user.id,
         game_type: body.gameSlug,
         config: body.config,
-        status: 'pending'
-      }
-    });
-
-    // Create project order
-    const order = await prisma.order.create({
-      data: {
-        user_id: user.id,
-        server_id: server.id,
-        game_id: game.id,
-        po_number: poNumber,
-        billing_cycle: 'MONTHLY',
-        status: 'ACTIVE'
+        status: 'pending',
+        pterodactyl_server_id: null
       }
     });
 
@@ -126,6 +115,19 @@ export default defineEventHandler(async (event) => {
       }
     })
 
+    // Create project order
+    const order = await prisma.order.create({
+      data: {
+        user_id: user.id,
+        server_id: server.id,
+        game_id: game.id,
+        po_number: poNumber,
+        recurring_id: recurringInvoice.data.id,
+        billing_cycle: 'MONTHLY',
+        status: 'ACTIVE'
+      }
+    });
+
     // Action start recurring invoice
     const startInvoice = await $fetch(`https://invoice.inovexservices.com/api/v1/recurring_invoices/bulk`, {
       method: 'POST',
@@ -142,9 +144,7 @@ export default defineEventHandler(async (event) => {
 
     console.log('Invoice Start:', startInvoice)
 
-    const invoice = await $fetch(`https://invoice.inovexservices.com/api/v1/invoices?client_id=${user.invoice_ninja_client_id
-
-    }`, {
+    const invoice = await $fetch(`https://invoice.inovexservices.com/api/v1/invoices?client_id=${user.invoice_ninja_client_id}`, {
       method: 'GET',
       headers: {
         'X-API-TOKEN': process.env.INVOICE_NINJA_TOKEN,
@@ -152,11 +152,15 @@ export default defineEventHandler(async (event) => {
       }
     })
 
+    // Get the latest invoice from the user that contains the "PO"
+    const latestInvoice = invoice.data.filter(inv => inv.po_number === poNumber).sort((a, b) => new Date(b.date) - new Date(a.date))[0]
+
     // Save invoice to database
     const dbInvoice = await prisma.invoices.create({
       data: {
         user_id: user.id,
-        invoice_ninja_id: recurringInvoice.data.id,
+        invoice_ninja_id: latestInvoice.id,
+        order_id: order.id,
         amount: recurringInvoice.data.amount,
         status: 'pending'
       }
