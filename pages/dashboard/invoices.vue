@@ -74,7 +74,7 @@
             <div v-if="invoice.line_items" class="mt-4 pt-4 border-t border-gray-700/50">
               <div v-for="(item, index) in invoice.line_items" :key="index" 
                    class="text-sm text-gray-400 flex justify-between mb-2 last:mb-0">
-                <div>{{ item.product_key }}</div>
+                <div>{{ item.notes }}</div>
                 <div>${{ item.cost }}</div>
               </div>
             </div>
@@ -90,11 +90,15 @@
   </template>
   
   <script setup>
+  const auth = useAuthStore();
   const { data: invoices, pending, error } = await useAsyncData('invoices', 
   async () => {
     try {
       const response = await $fetch('/api/invoices/customer', {
-        headers: useRequestHeaders(['cookie'])
+        headers: {
+          Authorization: `Bearer ${auth.token}`,
+          'Content-Type': 'application/json' // Explicit content type
+        }
       });
       
       // Validate response structure

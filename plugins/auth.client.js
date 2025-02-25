@@ -6,7 +6,7 @@ export default defineNuxtPlugin(async (nuxtApp) => {
     await auth.initialize()
 
     // Optional: Wait for auth to settle before proceeding
-    if (!process.server) {
-        await new Promise(resolve => setTimeout(resolve, 50))
-    }
+    // if (!process.server) {
+    //     await new Promise(resolve => setTimeout(resolve, 50))
+    // }
 })

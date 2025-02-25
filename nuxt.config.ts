@@ -39,9 +39,10 @@ export default defineNuxtConfig({
     '~/components/landing',
   ],
   runtimeConfig: {
+    pterodactylApiKey: process.env.NUXT_PTERODACTYL_API_KEY,
     public: {
       invoiceNinjaKey: process.env.NUXT_PUBLIC_INVOICE_NINJA_TOKEN,
-      pterodactylUrl: process.env.NUXT_PUBLIC_PTERODACTYL_URL
+      pterodactylUrl: process.env.NUXT_PUBLIC_PTERODACTYL_URL,
     }
   },
   css: [

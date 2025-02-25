@@ -23,8 +23,8 @@ export default defineEventHandler(async (event) => {
       include: {
         order: {
           include: {
-            server: true,
-            game: true
+            servers: true,
+            games: true
           }
         }
       },
