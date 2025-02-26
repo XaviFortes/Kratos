@@ -139,11 +139,6 @@ async function createServerParams(config: any): Promise<ServerCreateParams> {
     }
     // convert config.metadata to json
     const metadata = config.metadata;
-    console.log('Metadata:', metadata);
-    console.log('RAM:', metadata.server_specs.ram);
-    console.log('CPU:', metadata.server_specs.cpu);
-    console.log('Storage:', metadata.server_specs.storage);
-    console.log('Server type:', metadata.server_specs.server_type);
     const nest = metadata.game_slug === 'minecraft' ? 1 : 2;
     return {
       servername: config.order.po_number,

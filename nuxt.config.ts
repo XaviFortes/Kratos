@@ -50,7 +50,7 @@ export default defineNuxtConfig({
   ],
   image: {
     domains: [],
-    dir: 'public/images',
+    dir: 'public',
     presets: {
       game: {
         modifiers: {

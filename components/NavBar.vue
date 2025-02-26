@@ -19,12 +19,12 @@
             >
               Games
             </NuxtLink>
-            <NuxtLink 
+            <!-- <NuxtLink 
               to="/pricing" 
               class="text-gray-300 hover:text-white transition-colors"
             >
               Pricing
-            </NuxtLink>
+            </NuxtLink> -->
             <NuxtLink 
               to="/support" 
               class="text-gray-300 hover:text-white transition-colors"
@@ -100,12 +100,12 @@
           >
             Games
           </NuxtLink>
-          <NuxtLink 
+          <!-- <NuxtLink 
             to="/pricing" 
             class="block text-gray-300 hover:text-white"
           >
             Pricing
-          </NuxtLink>
+          </NuxtLink> -->
           <NuxtLink 
             to="/support" 
             class="block text-gray-300 hover:text-white"

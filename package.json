@@ -6,6 +6,12 @@
     "build": "nuxt build",
     "dev": "nuxt dev",
     "generate": "nuxt generate",
+    "lint": "eslint --ext .js,.ts,.vue --ignore-path .gitignore .",
+    "lint:fix": "eslint --ext .js,.ts,.vue --ignore-path .gitignore --fix .",
+    "start": "nuxt start",
+    "startWin": "env NITRO_HOST=0.0.0.0 node .output/server/index.mjs",
+    "startMac": "NITRO_HOST=0.0.0.0 node .output/server/index.mjs",
+    "deployVPS": "COPYFILE_DISABLE=1 tar -czf output.tar.gz .output && scp output.tar.gz karasu@157.180.23.14:~/.output.tar.gz && ssh karasu@157.180.23.14 'rm -rf ~/.output && tar -xzf ~/.output.tar.gz -C ~ && rm ~/.output.tar.gz'",
     "preview": "nuxt preview",
     "postinstall": "nuxt prepare"
   },

@@ -96,31 +96,48 @@ const cpuUsage = ref(15);
 
 // Sample data - replace with your API call
 onMounted(async () => {
-  // const response = await $api.getUserServers(authStore.user.id);
-  servers.value = [
-    {
-      id: 1,
-      name: 'Valhalla Clan',
-      game: 'valheim',
-      image: '/games/valheim.png',
-      status: 'online',
-      ip: '192.168.1.1:2456',
-      players: 8,
-      maxPlayers: 10,
-      uptime: '12d 4h'
-    },
-    {
-      id: 2,
-      name: 'Rust Arena',
-      game: 'rust',
-      image: '/games/rust.jpg',
-      status: 'offline',
-      ip: '192.168.1.1:28015',
-      players: 0,
-      maxPlayers: 50,
-      uptime: '2d 18h'
+  const userServers = await $fetch('/api/pterodactyl/user_servers', {
+    headers: {
+      Authorization: `Bearer ${authStore.token}`
     }
-  ];
+  });
+  // Format some data
+  servers.value = userServers.map(server => ({
+    id: server.id,
+    name: server.name,
+    game: 'WIP',
+    image: '/images/games/minecraft.png',
+    status: 'online',
+    ip: server.allocation.ip + ':' + server.allocation.port,
+    players: '∞', // Infinite symbol is '∞'
+    maxPlayers: '∞',
+    uptime: '∞'
+  }));
+  // const response = await $api.getUserServers(authStore.user.id);
+  // servers.value = [
+  //   {
+  //     id: 1,
+  //     name: 'Valhalla Clan',
+  //     game: 'valheim',
+  //     image: '/games/valheim.png',
+  //     status: 'online',
+  //     ip: '192.168.1.1:2456',
+  //     players: 8,
+  //     maxPlayers: 10,
+  //     uptime: '12d 4h'
+  //   },
+  //   {
+  //     id: 2,
+  //     name: 'Rust Arena',
+  //     game: 'rust',
+  //     image: '/games/rust.jpg',
+  //     status: 'offline',
+  //     ip: '192.168.1.1:28015',
+  //     players: 0,
+  //     maxPlayers: 50,
+  //     uptime: '2d 18h'
+  //   }
+  // ];
   activeServers.value = servers.value.filter(s => s.status === 'online').length;
 });
 </script>

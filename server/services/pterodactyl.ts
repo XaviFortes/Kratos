@@ -15,9 +15,9 @@ export class PterodactylService {
     })
     if (!user_uid) throw new Error('User not found')
     const pterodactylUserId = await this.findOrCreateUser(user)
-    console.log('[Pterodactyl] User ID:', pterodactylUserId)
+    // console.log('[Pterodactyl] User ID:', pterodactylUserId)
     const serverDetails = await this.createPterodactylServer(pterodactylUserId, config)
-    console.log('[Pterodactyl] Nuxt User ID:', user_uid)
+    // console.log('[Pterodactyl] Nuxt User ID:', user_uid)
     
     return prisma.servers.create({
       data: {
@@ -46,12 +46,12 @@ export class PterodactylService {
       console.debug('[Pterodactyl] User search response:', response)
 
       if (response.data.length > 0) {
-        console.log(`[Pterodactyl] Existing user found: ${response.data[0].attributes.id}`)
+        // console.log(`[Pterodactyl] Existing user found: ${response.data[0].attributes.id}`)
         return response.data[0].attributes.id
       }
     //   if (response.data.length > 0) return response.data[0].attributes.id
 
-      console.log('[Pterodactyl] Creating new user for:', user.email)
+    //   console.log('[Pterodactyl] Creating new user for:', user.email)
       const newUser = await ofetch(`${this.config.host}/api/application/users`, {
         method: 'POST',
         headers: this.getHeaders(),
@@ -70,10 +70,10 @@ export class PterodactylService {
             throw new Error('Invalid egg data response structure');
         }
 
-      console.log('[Pterodactyl] User creation response:', newUser)
+    //   console.log('[Pterodactyl] User creation response:', newUser)
 
       prisma.users.update({
-        where: { id: newUser.id },
+        where: { email: user.email },
         data: { pterodactyl_user_id: newUser.attributes.id }
         })
       return newUser.attributes.id
@@ -143,7 +143,7 @@ export class PterodactylService {
     try {
       // 1. Get all nodes in the selected location
       const nodes = await this.getNodesByLocation(location);
-      console.log('[Pterodactyl] Nodes:', nodes);
+    //   console.log('[Pterodactyl] Nodes:', nodes);
       
       // 2. Filter and sort nodes
       const suitableNodes = nodes
@@ -183,14 +183,14 @@ export class PterodactylService {
   }
   
   private async getNodesByLocation(location: number): Promise<NodeWithLocation[]> {
-    console.log('[Pterodactyl] Fetching nodes for location:', location)
+    // console.log('[Pterodactyl] Fetching nodes for location:', location)
     const response = await ofetch(`${this.config.host}/api/application/nodes`, {
       headers: this.getHeaders(),
       query: {
         filter: JSON.stringify({ location_id: location }),
       }
     });
-    console.log('[Pterodactyl] getNodesByLocation response:', JSON.stringify(response, null, 2));
+    // console.log('[Pterodactyl] getNodesByLocation response:', JSON.stringify(response, null, 2));
     return response.data.map((n: any) => ({
       ...n.attributes,
       location: n.attributes.location_id
@@ -229,15 +229,15 @@ export class PterodactylService {
             config.memory,
             config.disk
           );
-        console.log('[Pterodactyl] Node and allocation:', nodeId, allocationId)
+        // console.log('[Pterodactyl] Node and allocation:', nodeId, allocationId)
         
-      console.log('[Pterodactyl] Fetching egg data:', config.nest, config.egg)
+    //   console.log('[Pterodactyl] Fetching egg data:', config.nest, config.egg)
       const eggData = await this.getEggData(config.nest, config.egg)
-      console.log('[Pterodactyl] Egg data:', eggData)
+    //   console.log('[Pterodactyl] Egg data:', eggData)
       const serverName = config.servername || `Server-${Date.now()}`
-      console.log('[Pterodactyl] Creating server:', serverName)
+    //   console.log('[Pterodactyl] Creating server:', serverName)
 
-      console.log('[Pterodactyl] Allocation:', config.allocation.default)
+    //   console.log('[Pterodactyl] Allocation:', config.allocation.default)
 
       const server = await $fetch(`${this.config.host}/api/application/servers`, {
         method: 'POST',
@@ -278,9 +278,9 @@ export class PterodactylService {
 
         // console.log('[Pterodactyl] Server creation response:', server)
         const server_id = (server as any).attributes.id
-        console.log('[Pterodactyl] Server ID:', server_id)
+        // console.log('[Pterodactyl] Server ID:', server_id)
         const identifier = (server as any).attributes.identifier
-        console.log('[Pterodactyl] Server Identifier:', identifier)
+        // console.log('[Pterodactyl] Server Identifier:', identifier)
 
       return {
         id: server_id,
@@ -388,5 +388,33 @@ private async processEnvironment(
     }
     
     return portEnvironment;
+  }
+
+  async getServerDetails(serverId: string): Promise<PterodactylServer> {
+    const response = await ofetch(`${this.config.host}/api/application/servers/${serverId}?include=allocations`, {
+      headers: this.getHeaders()
+    })
+    // console.log('[Pterodactyl] Server details:', response)
+    return {
+      id: response.attributes.id,
+      identifier: response.attributes.identifier,
+      name: response.attributes.name,
+      status: response.attributes.status,
+      allocation: response.attributes.relationships.allocations.data[0].attributes
+    }
+  }
+
+  async getServersFromUser(userId: string): Promise<PterodactylServer[]> {
+    const response = await ofetch(`${this.config.host}/api/application/users/${userId}/servers`, {
+      headers: this.getHeaders()
+    })
+
+    return response.data.map((server: any) => ({
+      id: server.attributes.id,
+      identifier: server.attributes.identifier,
+      name: server.attributes.name,
+      status: server.attributes.status,
+      allocation: server.attributes.relationships.allocations.data[0].attributes
+    }))
   }
 }

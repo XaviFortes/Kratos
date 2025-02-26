@@ -45,7 +45,8 @@ interface PterodactylServerResponse {
 
 declare interface PterodactylServer {
     id: number
-    identifier: string
+    identifier: string,
+    name?: string,
     status?: string
     allocation?: {
         ip: string
