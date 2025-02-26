@@ -35,13 +35,29 @@ export default defineEventHandler(async (event) => {
           'Content-Type': 'application/json'
         },
         body: {
-          name: user.name,
-          contact: user.email
-        }
+          name: user.company_name || user.first_name + ' ' + user.last_name,
+          contacts: [
+            {
+              first_name: user.first_name,
+              last_name: user.last_name,
+              email: user.email,
+              phone: user.phone_number
+            }
+          ],
+          private_notes: 'Created by Cloud Panel',
+          contact: user.email,
+          phone: user.phone,
+          address1: user.street_address,
+          address2: user.street_address2,
+          city: user.city,
+          state: user.state,
+          postal_code: user.postal_code,
+      }
       })
 
       // Update user with Invoice Ninja client ID
-      await prisma.users.update({
+      // await 
+      prisma.users.update({
         where: { id: user.id },
         data: { invoice_ninja_client_id: client.data.id }
       })
@@ -71,15 +87,15 @@ export default defineEventHandler(async (event) => {
     if (!game) throw createError({ statusCode: 404, message: 'Game not found' });
 
     // Create server first (if not already existing)
-    const server = await prisma.servers.create({
-      data: {
-        user_id: user.id,
-        game_type: body.gameSlug,
-        config: body.config,
-        status: 'pending',
-        pterodactyl_server_id: null
-      }
-    });
+    // const server = await prisma.servers.create({
+      // data: {
+        // user_id: user.id,
+        // game_type: body.gameSlug,
+        // config: body.config,
+        // status: 'pending',
+        // pterodactyl_server_id: null
+      // }
+    // });
 
     // Create Invoice Ninja invoice
     const recurringInvoice = await $fetch('https://invoice.inovexservices.com/api/v1/recurring_invoices', {
@@ -118,9 +134,13 @@ export default defineEventHandler(async (event) => {
     // Create project order
     const order = await prisma.order.create({
       data: {
-        user_id: user.id,
-        server_id: server.id,
-        game_id: game.id,
+        users: {
+          connect: {
+            id: user.id
+          }
+        },
+        // server_id: server.id,
+        // game_id: game.id,
         po_number: poNumber,
         recurring_id: recurringInvoice.data.id,
         billing_cycle: 'MONTHLY',
@@ -154,6 +174,7 @@ export default defineEventHandler(async (event) => {
 
     // Get the latest invoice from the user that contains the "PO"
     const latestInvoice = invoice.data.filter(inv => inv.po_number === poNumber).sort((a, b) => new Date(b.date) - new Date(a.date))[0]
+    console.log('Latest Invoice:', latestInvoice)
 
     // Save invoice to database
     const dbInvoice = await prisma.invoices.create({
@@ -162,12 +183,16 @@ export default defineEventHandler(async (event) => {
         invoice_ninja_id: latestInvoice.id,
         order_id: order.id,
         amount: recurringInvoice.data.amount,
-        status: 'pending'
+        status: 'pending',
+        metadata: {
+          game_slug: body.gameSlug,
+          server_specs: body.config,
+        }
       }
     })
 
     return {
-      payment_url: recurringInvoice.data.invitations[0].link,
+      payment_url: latestInvoice.invitations[0].link,
       invoice_id: dbInvoice.id
     }
 

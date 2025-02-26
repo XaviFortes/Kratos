@@ -58,8 +58,8 @@ export class PterodactylService {
         body: {
           email: user.email,
           username: this.generateUsername(user.email),
-          first_name: user.name,
-          last_name: 'User',
+          first_name: user.first_name,
+          last_name: user.last_name,
           // password: this.generatePassword() Disable password generation for now
         },
         parseResponse: JSON.parse

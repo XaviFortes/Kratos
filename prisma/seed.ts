@@ -11,6 +11,10 @@ async function seed() {
         basePrice: 2.99,
         pricingTiers: {
           create: [
+            // Location
+            { type: 'location', label: 'EU', value: '1', price: 0 },
+            // { type: 'location', label: 'NA', value: '2', price: 3 },
+            // { type: 'location', label: 'Asia', value: 'asia', price: 0 },
             // RAM Tiers
             { type: 'ram', label: '1GB', value: '1', price: 0 },
             { type: 'ram', label: '2GB', value: '2', price: 2 },
@@ -19,9 +23,10 @@ async function seed() {
             { type: 'ram', label: '16GB', value: '16', price: 15 },
             { type: 'ram', label: '32GB', value: '32', price: 30 },
             // Server Types
-            { type: 'server_type', label: 'Vanilla', value: 'vanilla', price: 0 },
-            { type: 'server_type', label: 'Paper', value: 'paper', price: 0 },
-            { type: 'server_type', label: 'Forge', value: 'forge', price: 0 },
+            { type: 'server_type', label: 'Vanilla', value: '4', price: 0 },
+            { type: 'server_type', label: 'Paper', value: '1', price: 0 },
+            { type: 'server_type', label: 'Forge', value: '2', price: 0 },
+            { type: 'server_type', label: 'Sponge', value: '3', price: 0 },
             // CPU Tiers
             { type: 'cpu', label: '2 Cores', value: '2', price: 0 },
             { type: 'cpu', label: '3 Cores', value: '3', price: 1 },

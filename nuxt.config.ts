@@ -28,9 +28,9 @@ export default defineNuxtConfig({
     'pinia-plugin-persistedstate/nuxt', // Add persisted state
      '@nuxtjs/tailwindcss', '@nuxt/image', '@nuxt/icon'
   ],
-  piniaPersistedstate: {
-    storage: 'localStorage'
-  },
+  // piniaPluginPersistedstate: {
+    // storage: 'localStorage'
+  // },
   components: [
     {
       path: '~/components',

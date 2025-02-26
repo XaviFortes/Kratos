@@ -67,6 +67,12 @@
                 >
                   Dashboard
                 </NuxtLink>
+                <NuxtLink 
+                  to="/dashboard/invoices" 
+                  class="block px-4 py-3 text-gray-300 hover:bg-gray-800 hover:text-white"
+                >
+                  Invoices
+                </NuxtLink>
                 <button 
                   @click="auth.logout()" 
                   class="w-full text-left px-4 py-3 text-gray-300 hover:bg-gray-800 hover:text-white"
@@ -128,6 +134,12 @@
               class="block px-4 py-2 text-gray-300 hover:text-white"
             >
               Dashboard
+            </NuxtLink>
+            <NuxtLink 
+              to="/dashboard/invoices" 
+              class="block px-4 py-2 text-gray-300 hover:text-white"
+            >
+              Invoices
             </NuxtLink>
             <button 
               @click="auth.logout()" 

@@ -51,16 +51,28 @@ model users {
   id                      String     @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   email                   String     @unique @db.VarChar(255)
   password_hash           String     @db.VarChar(255)
+  first_name              String     @db.VarChar(100)
+  last_name               String     @db.VarChar(100)
+  phone_number            String?    @db.VarChar(20)
+  company_name            String?    @db.VarChar(255)
+  street_address          String     @db.VarChar(255)
+  street_address2         String?    @db.VarChar(255)
+  city                    String     @db.VarChar(100)
+  state                   String     @db.VarChar(50)
+  zip_code                String     @db.VarChar(20)
+  country                 String     @db.VarChar(50)
+  tax_id                  String?    @db.VarChar(50)
   invoice_ninja_client_id String?    @db.VarChar(255)
   pterodactyl_user_id     String?    @db.VarChar(255)
   created_at              DateTime?  @default(now()) @db.Timestamp(6)
   updated_at              DateTime?  @default(now()) @db.Timestamp(6)
-  name                    String     @db.VarChar(255)
   invoices                invoices[]
   servers                 servers[]
   Order                   Order[]
 
   @@index([email], map: "idx_users_email")
+  @@index([country], name: "idx_users_country")
+  @@index([tax_id], name: "idx_users_tax_id")
 }
 
 model Game {
@@ -103,9 +115,9 @@ model PriceModifier {
 model Order {
   id            String       @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   user_id       String       @db.Uuid
-  server_id     String       @db.Uuid
-  game_id       String       @db.Uuid
   po_number     String      @db.VarChar(255)
+  server_id     String?       @db.Uuid
+  game_id       String?       @db.Uuid
   status        OrderStatus  @default(ACTIVE)
   start_date    DateTime     @default(now())
   end_date      DateTime?    @db.Timestamp(6)
@@ -114,9 +126,9 @@ model Order {
   updated_at    DateTime     @default(now()) @db.Timestamp(6)
   recurring_id  String       @db.VarChar(255)
   invoices      invoices[]
-  users         users        @relation(fields: [user_id], references: [id], onDelete: Cascade)
-  servers       servers      @relation(fields: [server_id], references: [id], onDelete: Cascade)
-  games         Game         @relation(fields: [game_id], references: [id], onDelete: Cascade)
+  users         users?        @relation(fields: [user_id], references: [id], onDelete: Cascade)
+  servers       servers?      @relation(fields: [server_id], references: [id], onDelete: Cascade)
+  games         Game?         @relation(fields: [game_id], references: [id], onDelete: Cascade)
 
   @@index([user_id], name: "idx_order_user")
   @@index([server_id], name: "idx_order_server")

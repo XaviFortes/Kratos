@@ -9,7 +9,7 @@
             <h3 class="text-lg font-semibold text-gray-300 mb-2">Test User Creation</h3>
             <input v-model="testUser.email" placeholder="Email" class="bg-gray-600/50 text-gray-300 p-2 rounded mb-2">
             <!-- <input v-model="testUser.username" placeholder="Username" class="bg-gray-600/50 text-gray-300 p-2 rounded mb-2"> -->
-            <input v-model="testUser.name" placeholder="name" class="bg-gray-600/50 text-gray-300 p-2 rounded mb-2">
+            <input v-model="testUser.first_name" placeholder="name" class="bg-gray-600/50 text-gray-300 p-2 rounded mb-2">
             <button @click="testAction('create-user')" class="bg-blue-500 hover:bg-blue-600 px-4 py-2 rounded">
               Test User Creation
             </button>
@@ -61,7 +61,7 @@
   const testUser = ref({
     email: 'thextay@gmail.com',
     // username: 'testuser',
-    name: 'Test'
+    first_name: 'Test'
 })
   const serverConfig = ref({
     user_id: 1,

@@ -11,6 +11,7 @@
             :game="game"
             :pricing-data="pricingData"
             :config="serverConfig"
+            @update:serverType="handleServerTypeUpdate"
             @update:ram="handleRamUpdate"
             @update:cpu="handleCpuUpdate"
             @update:storage="handleStorageUpdate"
@@ -45,6 +46,7 @@ const { featuredGames } = useFeaturedGames();
 
 // Server configuration state
 const serverConfig = ref({
+  server_type: null,
   ram: null,
   cpu: null,
   storage: null,
@@ -72,6 +74,7 @@ const findBaseTier = (type, data) => {
 watch(pricingData, (newData) => {
   if (newData) {
     serverConfig.value = {
+      server_type: findBaseTier('server_type', newData) || 1,
       ram: findBaseTier('ram', newData),
       cpu: findBaseTier('cpu', newData),
       storage: findBaseTier('storage', newData),
@@ -85,6 +88,12 @@ const totalPrice = computed(() => {
   if (!pricingData.value) return 0;
   
   let total = Number(pricingData.value.basePrice);
+
+  // Add Server Type Cost
+  const serverTypeTier = pricingData.value.pricingTiers.find(t => 
+    t.type === 'server_type' && Number(t.value) === serverConfig.value.server_type
+  );
+  total += Number(serverTypeTier?.price) || 0;
   
   // Add RAM cost
   const ramTier = pricingData.value.pricingTiers.find(t => 
@@ -108,6 +117,7 @@ const totalPrice = computed(() => {
 });
 
 // Update handlers
+const handleServerTypeUpdate = (newVal) => { serverConfig.value.server_type = Number(newVal) };
 const handleRamUpdate = (newVal) => { serverConfig.value.ram = Number(newVal) };
 const handleCpuUpdate = (newVal) => { serverConfig.value.cpu = Number(newVal) };
 const handleStorageUpdate = (newVal) => { serverConfig.value.storage = Number(newVal) };
