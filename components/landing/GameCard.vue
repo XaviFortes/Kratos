@@ -1,15 +1,28 @@
 <template>
-  <NuxtLink 
-    :to="`/games/${game.slug}`"
-    class="game-card relative overflow-hidden rounded-2xl border border-gray-700/50 bg-gray-900 transform hover:-translate-y-2 transition-all duration-300 group"
+  <NuxtLink
+    :to="!game.soldOut ? `/games/${game.slug}` : undefined"
+    class="game-card relative overflow-hidden rounded-2xl border border-gray-700/50 bg-gray-900 transform transition-all duration-300 group"
+    :class="{
+      'hover:-translate-y-2': !game.soldOut,
+      'cursor-not-allowed opacity-80': game.soldOut
+    }"
     :style="{ '--delay': index * 100 + 'ms' }"
   >
+    <!-- Sold Out Overlay -->
+    <div 
+      v-if="game.soldOut"
+      class="absolute inset-0 z-20 bg-gray-900/80 flex items-center justify-center"
+    >
+      <span class="text-2xl font-bold text-white tracking-wider">SOLD OUT</span>
+    </div>
+
     <div class="relative overflow-hidden h-64">
       <NuxtImg 
         :src="game.image"
         :alt="game.name"
         provider="ipx"
-        class="w-full h-full object-cover transform group-hover:scale-105 transition-all duration-500"
+        class="w-full h-full object-cover transform transition-all duration-500"
+        :class="{ 'group-hover:scale-105': !game.soldOut }"
         loading="lazy"
       />
       <div class="absolute inset-0 bg-gradient-to-t from-gray-900/80 to-transparent" />
@@ -23,7 +36,8 @@
         <div class="text-blue-400 text-lg font-semibold">
           From ${{ game.minPrice }}/mo
         </div>
-        <div class="flex items-center text-white hover:text-blue-400 transition-colors">
+        <div class="flex items-center text-white transition-colors"
+             :class="{ 'hover:text-blue-400': !game.soldOut }">
           Get Started
           <Icon name="heroicons:arrow-right-20-solid" class="ml-2 w-4 h-4" />
         </div>
