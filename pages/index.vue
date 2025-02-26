@@ -44,7 +44,7 @@
 
         <!-- Featured Games Grid -->
         <section class="py-20 bg-gray-800/50">
-            <div class="container mx-auto px-4">
+            <div class="container mx-auto px-4" id="games">
                 <h2 class="text-4xl font-bold mb-16 text-center text-white">
                     Choose Your <span
                         class="text-transparent bg-clip-text bg-gradient-to-r from-blue-400 to-purple-500">Battlefield</span>
@@ -64,7 +64,7 @@
                 <p class="text-xl text-white/90 mb-8 max-w-2xl mx-auto">
                     Join thousands of gamers already experiencing lag-free gameplay and instant server setup.
                 </p>
-                <button
+                <button @click="scrollToGames"
                     class="bg-white text-blue-600 px-8 py-4 rounded-xl text-lg font-bold transform hover:scale-105 transition-all duration-300 shadow-lg">
                     Get Started in 60 Seconds
                 </button>
@@ -84,8 +84,9 @@ const featuredGames = ref([
         slug: 'minecraft', // Match this with the route param
         image: '/images/games/minecraft.png',
         description: 'Build, explore, and survive in your own blocky universe',
-        minPrice: 4.99,
-        features: ['Mod Support', '1-Click Install', 'SSD Storage']
+        minPrice: 2.99,
+        features: ['Mod Support', '1-Click Install', 'SSD Storage'],
+        soldOut: false
     },
     {
         id: 2,
@@ -94,7 +95,8 @@ const featuredGames = ref([
         image: '/images/games/valheim.png',
         description: 'Conquer the tenth Norse world with your clan',
         minPrice: 7.99,
-        features: ['Auto Updates', 'World Backups', 'Dedicated IP']
+        features: ['Auto Updates', 'World Backups', 'Dedicated IP'],
+        soldOut: true
     },
     {
         id: 3,
@@ -103,7 +105,8 @@ const featuredGames = ref([
         image: '/images/games/rust.jpg',
         description: 'Survive the ultimate multiplayer survival experience',
         minPrice: 9.99,
-        features: ['Wipe Scheduler', 'High Performance', 'Mod Manager']
+        features: ['Wipe Scheduler', 'High Performance', 'Mod Manager'],
+        soldOut: true
     },
 ]);
 

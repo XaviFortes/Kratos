@@ -29,14 +29,14 @@ async function seed() {
             { type: 'server_type', label: 'Sponge', value: '3', price: 0 },
             // CPU Tiers
             { type: 'cpu', label: '2 Cores', value: '2', price: 0 },
-            { type: 'cpu', label: '3 Cores', value: '3', price: 1 },
-            { type: 'cpu', label: '4 Cores', value: '4', price: 2 },
-            { type: 'cpu', label: '8 Cores', value: '8', price: 4 },
-            { type: 'cpu', label: '16 Cores', value: '16', price: 8 },
+            { type: 'cpu', label: '3 Cores', value: '3', price: 2 },
+            { type: 'cpu', label: '4 Cores', value: '4', price: 3 },
+            { type: 'cpu', label: '8 Cores', value: '8', price: 6 },
+            { type: 'cpu', label: '16 Cores', value: '16', price: 12 },
             // Disk Tiers
-            { type: 'storage', label: '50GB', value: '50', price: 0 },
-            { type: 'storage', label: '100GB', value: '100', price: 1 },
-            { type: 'storage', label: '200GB', value: '200', price: 2 },
+            { type: 'storage', label: '10GB', value: '10', price: 0 },
+            { type: 'storage', label: '20GB', value: '20', price: 0.5 },
+            { type: 'storage', label: '40GB', value: '40', price: 1 },
             // Extras
             { type: 'extra', label: 'Dedicated IP', value: 'true', price: 2 },
             { type: 'extra', label: 'Dedicated Server', value: 'true', price: 5 }
