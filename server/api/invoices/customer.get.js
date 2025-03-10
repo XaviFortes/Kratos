@@ -3,19 +3,25 @@ import prisma from '../../lib/prisma'
 import jwt from 'jsonwebtoken'
 
 export default defineEventHandler(async (event) => {
-  const authHeader = getHeader(event, 'Authorization')
-  const token = authHeader?.split(' ')[1]
+  // const user = await event.context.user
+  console.log('Event:', event)
+  // console.log('User:', user)
+  console.log('Headers:', event.headers)
+  // console.log('Token:', token)
   if (!token) throw createError({ statusCode: 401 })
+
+  if (!user) throw createError({ statusCode: 401 })
+  
 
   try {
     // Verify JWT
-    const { user_id } = jwt.verify(token, process.env.JWT_SECRET)
+    
+    jwt.verify(token, process.env.JWT_SECRET)
+
     const user = await prisma.users.findUnique({ 
-      where: { id: user_id },
+      where: { id: user.id },
       include: { invoices: true }
     })
-
-    if (!user) throw createError({ statusCode: 401 })
 
     // Fetch invoices with related data
     const dbInvoices = await prisma.invoices.findMany({

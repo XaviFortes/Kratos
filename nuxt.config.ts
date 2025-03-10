@@ -1,8 +1,8 @@
 // https://nuxt.com/docs/api/configuration/nuxt-config
 export default defineNuxtConfig({
-  plugins: [
-    '~/plugins/auth.client.js',
-  ],
+  // plugins: [
+  //   '~/plugins/auth.client.js',
+  // ],
   compatibilityDate: '2024-11-01',
   routeRules: {
     // Public pages
@@ -12,9 +12,18 @@ export default defineNuxtConfig({
     
     // Auth pages
     '/auth/**': { ssr: false },
+
+    // '/dashboard': { ssr: false },
+    '/dashboard/**': { 
+      cors: true,
+      headers: {
+        'Access-Control-Allow-Credentials': 'true',
+        'Access-Control-Allow-Origin': '*',
+     },
+    },
     
     // Protected pages
-    //'/dashboard/**': { middleware: 'auth' }
+    // '/dashboard/**': { middleware: 'auth' }
   },
   devtools: {
     enabled: true,
@@ -23,11 +32,8 @@ export default defineNuxtConfig({
       enabled: true,
     },
   },
-  modules: [
-    ['@pinia/nuxt', { autoImports: ['defineStore'] }],
-    'pinia-plugin-persistedstate/nuxt', // Add persisted state
-     '@nuxtjs/tailwindcss', '@nuxt/image', '@nuxt/icon'
-  ],
+  modules: [['@pinia/nuxt', { autoImports: ['defineStore'] }], // Add persisted state
+  'pinia-plugin-persistedstate/nuxt', '@nuxtjs/tailwindcss', '@nuxt/image', '@nuxt/icon', '@sidebase/nuxt-auth'],
   // piniaPluginPersistedstate: {
     // storage: 'localStorage'
   // },
@@ -60,4 +66,13 @@ export default defineNuxtConfig({
       }
     }
   },
+  imports: {
+    autoImport: true,
+    presets: [
+      {
+        from: 'h3',
+        imports: ['defineEventHandler', 'getCookie', 'setCookie', 'deleteCookie']
+      }
+    ]
+  }
 })

@@ -89,6 +89,7 @@ const handleLogin = async () => {
   
   try {
     await auth.login(email.value, password.value)
+    await auth.initialize()
     
     // Handle cart restoration
     if (cart.tempCartId) {
