@@ -33,7 +33,7 @@
             </NuxtLink>
   
             <!-- Auth Links -->
-            <template v-if="!auth.isAuthenticated">
+            <template v-if="!user">
               <NuxtLink 
                 to="/auth/login" 
                 class="px-4 py-2 text-gray-300 hover:text-white transition-colors"
@@ -53,10 +53,10 @@
               <button class="flex items-center space-x-2">
                 <div class="w-8 h-8 rounded-full bg-gradient-to-r from-blue-400 to-purple-500 flex items-center justify-center">
                   <span class="text-white text-sm font-bold">
-                    {{ auth.user.email[0].toUpperCase() }}
+                    {{ email[0].toUpperCase() || 'U' }}
                   </span>
                 </div>
-                <span class="text-gray-300">{{ auth.user.email }}</span>
+                <span class="text-gray-300">{{ email || 'U' }}</span>
               </button>
   
               <!-- Dropdown Menu -->
@@ -73,12 +73,16 @@
                 >
                   Invoices
                 </NuxtLink>
-                <button 
-                  @click="auth.logout()" 
-                  class="w-full text-left px-4 py-3 text-gray-300 hover:bg-gray-800 hover:text-white"
-                >
+                <a 
+                  href="/api/auth/signout" 
+                  class="block px-4 py-2 text-gray-300 hover:bg-gray-800 hover:text-white">
                   Logout
-                </button>
+                </a>
+                <!-- <button  -->
+                  <!-- @click="auth.logout()"  -->
+                  <!-- class="w-full text-left px-4 py-3 text-gray-300 hover:bg-gray-800 hover:text-white"> -->
+                  <!-- Logout -->
+                <!-- </button> -->
               </div>
             </div>
           </div>
@@ -113,7 +117,7 @@
             Support
           </NuxtLink>
   
-          <template v-if="!auth.isAuthenticated">
+          <template v-if="!user">
             <NuxtLink 
               to="/auth/login" 
               class="block px-4 py-2 text-gray-300 hover:text-white"
@@ -141,19 +145,29 @@
             >
               Invoices
             </NuxtLink>
-            <button 
-              @click="auth.logout()" 
-              class="block w-full text-left px-4 py-2 text-gray-300 hover:text-white"
+            <NuxtLink 
+              to="/api/auth/signout" 
+              class="block px-4 py-2 text-gray-300 hover:text-white"
             >
               Logout
-            </button>
+            </NuxtLink>
+            <!-- <button  -->
+              <!-- @click="auth.logout()"  -->
+              <!-- class="block w-full text-left px-4 py-2 text-gray-300 hover:text-white" -->
+            <!-- > -->
+              <!-- Logout -->
+            <!-- </button> -->
           </template>
         </div>
       </div>
     </nav>
   </template>
-  
+
   <script setup>
+  const { data } = useAuth()
+  const user = data?.value?.user
+  const email = user?.email || "missigno"
+  const image = user?.image || ''
   const auth = useAuthStore()
   const isMobileMenuOpen = ref(false)
   

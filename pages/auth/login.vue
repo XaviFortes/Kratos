@@ -13,7 +13,8 @@
             <input 
               v-model="email" 
               type="email" 
-              placeholder="your@email.com" 
+              placeholder="your@email.com"
+              autocomplete="username"
               required
               class="w-full bg-gray-700/40 rounded-lg px-4 py-3 text-gray-100 focus:outline-none focus:ring-2 focus:ring-purple-500"
             >
@@ -25,7 +26,8 @@
             <input 
               v-model="password" 
               type="password" 
-              placeholder="••••••••" 
+              placeholder="••••••••"
+              autocomplete="current-password"
               required
               class="w-full bg-gray-700/40 rounded-lg px-4 py-3 text-gray-100 focus:outline-none focus:ring-2 focus:ring-purple-500"
             >

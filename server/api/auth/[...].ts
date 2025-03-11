@@ -1,0 +1,77 @@
+// import GithubProvider from 'next-auth/providers/github'
+// import CredentialsProvider from 'next-auth/providers/credentials'
+import { NuxtAuthHandler } from '#auth'
+import DiscordProvider from 'next-auth/providers/discord'
+
+export default NuxtAuthHandler({
+    // A secret string you define, to ensure correct encryption
+    //   secret: process.env.SECRET!,
+    secret: useRuntimeConfig().authSecret,
+    // pages: {
+        // signIn: '/api/auth/signIn',
+        // signOut: '/api/auth/signOut',
+        // error: '/api/auth/error',
+        // verifyRequest: '/api/auth/verify-request',
+        // newUser: '/api/auth/new-user'
+    // },
+    providers: [
+        // @ts-expect-error Use .default here for it to work during SSR.
+        DiscordProvider.default({
+            clientId: process.env.DISCORD_ID!, // Your Discord application ID
+            clientSecret: process.env.DISCORD_SECRET! // Your Discord application secret
+        }),
+        // GithubProvider.default({
+        //   clientId: process.env.GH!,
+        //   clientSecret: 'your-client-secret'
+        // }),
+        /*
+        CredentialsProvider({
+            credentials: {
+                email: { label: 'Email', type: 'email', placeholder: '' },
+                password: { label: 'Password', type: 'password' }
+            },
+            authorize: async (credentials, req) => {
+              */
+    ],
+    callbacks: {
+        /* on before signin */
+        async signIn({ user, account, profile, email, credentials }) {
+            return true
+        },
+        /* on redirect to another url */
+        async redirect({ url, baseUrl }) {
+            return baseUrl
+        },
+        /* on session retrival */
+        async session({ session, user, token }) {
+            return session
+        },
+        // async session({ session, user, token }) {
+            // const token2 = token.sessionToken
+// 
+            // //Fetch data OR add previous data from the JWT callback.
+            // const additionalUserData: { name: string, avatar: string, role: string } = await $fetch(`/api/session/${token2}`)
+// 
+            // return {
+                // ...session,
+                // user: {
+                    // name: additionalUserData.name,
+                    // avatar: additionalUserData.avatar,
+                    // role: additionalUserData.role
+                // }
+            // }
+        // },
+        /* on JWT token creation or mutation */
+        async jwt({ token, user, account, profile, isNewUser }) {
+            return token
+        }
+    },
+    events: {
+        async signIn(message) { /* on successful sign in */ },
+        async signOut(message) { /* on signout */ },
+        async createUser(message) { /* user created */ },
+        async updateUser(message) { /* user updated - e.g. their email was verified */ },
+        async linkAccount(message) { /* account (e.g. GitHub) linked to a user */ },
+        async session(message) { /* session is active */ },
+    },
+})

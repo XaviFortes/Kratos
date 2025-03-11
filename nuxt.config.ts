@@ -9,19 +9,19 @@ export default defineNuxtConfig({
     '/': { ssr: true },
     '/about': { ssr: true },
     '/contact': { ssr: true },
-    
+
     // Auth pages
-    '/auth/**': { ssr: false },
+    // '/auth/**': { ssr: false },
 
     // '/dashboard': { ssr: false },
-    '/dashboard/**': { 
+    '/dashboard/**': {
       cors: true,
       headers: {
         'Access-Control-Allow-Credentials': 'true',
         'Access-Control-Allow-Origin': '*',
-     },
+      },
     },
-    
+
     // Protected pages
     // '/dashboard/**': { middleware: 'auth' }
   },
@@ -33,9 +33,26 @@ export default defineNuxtConfig({
     },
   },
   modules: [['@pinia/nuxt', { autoImports: ['defineStore'] }], // Add persisted state
-  'pinia-plugin-persistedstate/nuxt', '@nuxtjs/tailwindcss', '@nuxt/image', '@nuxt/icon', '@sidebase/nuxt-auth'],
+    'pinia-plugin-persistedstate/nuxt', '@nuxtjs/tailwindcss', '@nuxt/image', '@nuxt/icon', '@sidebase/nuxt-auth'],
+  auth: {
+    isEnabled: true,
+    disableServerSideAuth: false,
+    originEnvKey: 'AUTH_ORIGIN',
+    baseURL: 'http://localhost:3000/api/auth',
+    // provider: { /* your provider config */ },
+    provider: {
+      type: 'authjs',
+      trustHost: false,
+      defaultProvider: 'discord',
+      addDefaultCallbackUrl: true
+    },
+    sessionRefresh: {
+      enablePeriodically: true,
+      enableOnWindowFocus: true,
+    },
+  },
   // piniaPluginPersistedstate: {
-    // storage: 'localStorage'
+  // storage: 'localStorage'
   // },
   components: [
     {
