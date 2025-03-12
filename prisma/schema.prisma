@@ -9,93 +9,164 @@ datasource db {
   shadowDatabaseUrl = env("SHADOW_DATABASE_URL")
 }
 
-model invoices {
+model User {
+  id            String          @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  name          String?
+  email         String          @unique
+  emailVerified DateTime?       @map("email_verified")
+  image         String?
+  accounts      Account[]
+  sessions      Session[]
+  authenticators Authenticator[]
+  passwordHash  String?         @map("password_hash") @db.VarChar(255)
+  firstName     String?          @map("first_name") @db.VarChar(100)
+  lastName      String?          @map("last_name") @db.VarChar(100)
+  phoneNumber   String?         @map("phone_number") @db.VarChar(20)
+  companyName   String?         @map("company_name") @db.VarChar(255)
+  streetAddress String?          @map("street_address") @db.VarChar(255)
+  streetAddress2 String?        @map("street_address_2") @db.VarChar(255)
+  city          String?          @db.VarChar(100)
+  state         String?          @db.VarChar(50)
+  zipCode       String?          @map("zip_code") @db.VarChar(20)
+  country       String?          @db.VarChar(50)
+  taxId         String?         @map("tax_id") @db.VarChar(50)
+  invoiceNinjaClientId String?  @map("invoice_ninja_client_id") @db.VarChar(255)
+  pterodactylUserId String?     @map("pterodactyl_user_id") @db.VarChar(255)
+  stripeCustomerId String?      @map("stripe_customer_id") @db.VarChar(255)
+  isAdmin       Boolean         @map("is_admin") @default(false)
+  createdAt     DateTime        @default(now()) @map("created_at") @db.Timestamp(6)
+  updatedAt     DateTime        @default(now()) @map("updated_at") @db.Timestamp(6)
+
+  invoices      Invoice[]
+  servers       Server[]
+  orders        Order[]
+  subscriptions Subscription[]
+
+  @@map("users")
+}
+
+model Account {
+  userId            String     @db.Uuid
+  type              String
+  provider          String
+  providerAccountId String
+  refresh_token     String?    @db.Text
+  access_token      String?    @db.Text
+  expires_at        Int?
+  token_type        String?
+  scope             String?
+  id_token          String?    @db.Text
+  session_state     String?
+  createdAt         DateTime   @default(now()) @map("created_at") @db.Timestamp(6)
+  updatedAt         DateTime   @default(now()) @map("updated_at") @db.Timestamp(6)
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@id([provider, providerAccountId])
+  @@map("accounts")
+}
+
+model Session {
+  sessionToken String   @unique @db.Text
+  userId       String   @db.Uuid
+  expires      DateTime @db.Timestamp(6)
+  createdAt    DateTime @default(now()) @map("created_at") @db.Timestamp(6)
+  updatedAt    DateTime @default(now()) @map("updated_at") @db.Timestamp(6)
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("sessions")
+}
+
+model VerificationToken {
+  identifier String
+  token      String   @db.Text
+  expires    DateTime @db.Timestamp(6)
+
+  @@id([identifier, token])
+  @@map("verification_tokens")
+}
+
+model Authenticator {
+  credentialID         String   @unique @db.Text
+  userId               String   @db.Uuid
+  providerAccountId    String
+  credentialPublicKey  String   @db.Text
+  counter              Int
+  credentialDeviceType String
+  credentialBackedUp   Boolean
+  transports           String?
+  createdAt            DateTime @default(now()) @map("created_at") @db.Timestamp(6)
+  updatedAt            DateTime @default(now()) @map("updated_at") @db.Timestamp(6)
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@id([userId, credentialID])
+  @@map("authenticators")
+}
+
+model Invoice {
   id               String           @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  order_id         String           @db.Uuid
-  user_id          String           @db.Uuid
-  server_id        String?          @db.Uuid
-  invoice_ninja_id String?          @db.VarChar(255)
-  stripe_id        String?          @unique @db.VarChar(255)
+  orderId          String           @map("order_id") @db.Uuid
+  userId           String           @map("user_id") @db.Uuid
+  serverId         String?          @map("server_id") @db.Uuid
+  invoiceNinjaId   String?          @map("invoice_ninja_id") @db.VarChar(255)
+  stripeId         String?          @unique @map("stripe_id") @db.VarChar(255)
   amount           Decimal          @db.Decimal(10, 2)
   status           InvoiceStatus    @default(pending)
   metadata         Json?
-  created_at       DateTime?        @default(now()) @db.Timestamp(6)
-  updated_at       DateTime?        @default(now()) @db.Timestamp(6)
-  due_date         DateTime?        @db.Timestamp(6)
-  subscription_id  String?          @db.Uuid
-  servers          servers?         @relation(fields: [server_id], references: [id], onUpdate: NoAction)
-  users            users            @relation(fields: [user_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
-  game_id          String?          @db.Uuid
-  game             Game?            @relation(fields: [game_id], references: [id])
-  order            Order            @relation(fields: [order_id], references: [id], onDelete: Cascade)
-  subscription     Subscription?    @relation(fields: [subscription_id], references: [id])
+  createdAt        DateTime?        @default(now()) @map("created_at") @db.Timestamp(6)
+  updatedAt        DateTime?        @default(now()) @map("updated_at") @db.Timestamp(6)
+  dueDate          DateTime?        @map("due_date") @db.Timestamp(6)
+  subscriptionId   String?          @map("subscription_id") @db.Uuid
+  gameId           String?          @map("game_id") @db.Uuid
 
-  @@unique([invoice_ninja_id])
-  @@index([status], map: "idx_invoices_status")
-  @@index([user_id], map: "idx_invoices_user_id")
-  @@index([order_id], name: "idx_invoice_order")
+  user        User         @relation(fields: [userId], references: [id])
+  server      Server?      @relation(fields: [serverId], references: [id])
+  game        Game?        @relation(fields: [gameId], references: [id])
+  order       Order        @relation(fields: [orderId], references: [id])
+  subscription Subscription? @relation(fields: [subscriptionId], references: [id])
+
+  @@unique([invoiceNinjaId])
+  @@index([status])
+  @@index([userId])
+  @@index([orderId])
+  @@map("invoices")
 }
 
 model Subscription {
   id                  String        @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  user_id             String        @db.Uuid
-  stripe_subscription String        @unique @db.VarChar(255)
+  userId              String        @map("user_id") @db.Uuid
+  stripeSubscription  String        @unique @map("stripe_subscription") @db.VarChar(255)
   status              SubStatus     @default(active)
-  current_period_end  DateTime      @db.Timestamp(6)
-  created_at          DateTime?     @default(now()) @db.Timestamp(6)
-  updated_at          DateTime?     @default(now()) @db.Timestamp(6)
-  user                users         @relation(fields: [user_id], references: [id])
-  invoices            invoices[]
+  currentPeriodEnd    DateTime      @map("current_period_end") @db.Timestamp(6)
+  createdAt           DateTime?     @default(now()) @map("created_at") @db.Timestamp(6)
+  updatedAt           DateTime?     @default(now()) @map("updated_at") @db.Timestamp(6)
 
-  @@index([user_id], name: "idx_subscription_user")
-  @@index([status], name: "idx_subscription_status")
+  user    User     @relation(fields: [userId], references: [id])
+  invoices Invoice[]
+
+  @@index([userId])
+  @@index([status])
+  @@map("subscriptions")
 }
 
-model servers {
-  id                    String     @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  user_id               String     @db.Uuid
-  game_type             String     @db.VarChar(50)
-  config                Json
-  pterodactyl_server_id String?    @db.VarChar(255)
-  status                String?    @default("pending") @db.VarChar(20)
-  created_at            DateTime?  @default(now()) @db.Timestamp(6)
-  updated_at            DateTime?  @default(now()) @db.Timestamp(6)
-  invoices              invoices[]
-  users                 users      @relation(fields: [user_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
-  Order                 Order[]
+model Server {
+  id                  String     @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  userId              String     @map("user_id") @db.Uuid
+  gameType            String     @map("game_type") @db.VarChar(50)
+  config              Json
+  pterodactylServerId String?    @map("pterodactyl_server_id") @db.VarChar(255)
+  status              String?    @default("pending") @db.VarChar(20)
+  createdAt           DateTime?  @default(now()) @map("created_at") @db.Timestamp(6)
+  updatedAt           DateTime?  @default(now()) @map("updated_at") @db.Timestamp(6)
 
-  @@index([user_id], map: "idx_servers_user_id")
-}
+  user    User      @relation(fields: [userId], references: [id])
+  invoices Invoice[]
+  orders  Order[]
 
-model users {
-  id                      String        @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  email                   String        @unique @db.VarChar(255)
-  password_hash           String        @db.VarChar(255)
-  first_name              String        @db.VarChar(100)
-  last_name               String        @db.VarChar(100)
-  phone_number            String?       @db.VarChar(20)
-  company_name            String?       @db.VarChar(255)
-  street_address          String        @db.VarChar(255)
-  street_address2         String?       @db.VarChar(255)
-  city                    String        @db.VarChar(100)
-  state                   String        @db.VarChar(50)
-  zip_code                String        @db.VarChar(20)
-  country                 String        @db.VarChar(50)
-  tax_id                  String?       @db.VarChar(50)
-  invoice_ninja_client_id String?       @db.VarChar(255)
-  pterodactyl_user_id     String?       @db.VarChar(255)
-  stripe_customer_id      String?       @unique @db.VarChar(255)
-  is_admin                Boolean       @default(false)
-  created_at              DateTime?     @default(now()) @db.Timestamp(6)
-  updated_at              DateTime?     @default(now()) @db.Timestamp(6)
-  invoices                invoices[]
-  servers                 servers[]
-  Order                   Order[]
-  subscriptions           Subscription[]
-
-  @@index([email], map: "idx_users_email")
-  @@index([country], name: "idx_users_country")
-  @@index([tax_id], name: "idx_users_tax_id")
+  @@index([userId])
+  @@map("servers")
 }
 
 model Game {
@@ -103,61 +174,67 @@ model Game {
   name         String
   slug         String          @unique
   basePrice    Decimal         @db.Decimal(10, 2)
+  createdAt    DateTime        @default(now()) @map("created_at")
+  updatedAt    DateTime        @updatedAt @map("updated_at")
+
   pricingTiers PricingTier[]
   modifiers    PriceModifier[]
-  createdAt    DateTime        @default(now())
-  updatedAt    DateTime        @updatedAt
-  invoices     invoices[]
-  Order        Order[]
+  invoices     Invoice[]
+  orders       Order[]
 }
 
 model PricingTier {
   id        String   @id @default(dbgenerated("gen_random_uuid()"))
-  game      Game     @relation(fields: [gameId], references: [id])
-  gameId    String   @db.Uuid
-  type      String // 'ram', 'cpu', 'storage', 'server_type'
+  gameId    String   @map("game_id") @db.Uuid
+  type      String
   label     String
-  value     String // e.g. '8' (for GB), 'spigot' (for server type)
+  value     String
   price     Decimal  @db.Decimal(10, 2)
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  game Game @relation(fields: [gameId], references: [id])
 }
 
 model PriceModifier {
   id          String   @id @default(dbgenerated("gen_random_uuid()"))
-  game        Game     @relation(fields: [gameId], references: [id])
-  gameId      String   @db.Uuid
-  type        String // 'multiplier', 'fixed', 'conditional'
-  condition   Json? // { field: 'server_type', value: 'spigot' }
+  gameId      String   @map("game_id") @db.Uuid
+  type        String
+  condition   Json?
   value       Decimal  @db.Decimal(10, 2)
   description String
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  game Game @relation(fields: [gameId], references: [id])
 }
 
 model Order {
   id            String       @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  user_id       String       @db.Uuid
-  po_number     String      @db.VarChar(255)
-  server_id     String?       @db.Uuid
-  game_id       String?       @db.Uuid
+  userId        String       @map("user_id") @db.Uuid
+  poNumber      String      @map("po_number") @db.VarChar(255)
+  serverId      String?      @map("server_id") @db.Uuid
+  gameId        String?      @map("game_id") @db.Uuid
   status        OrderStatus  @default(ACTIVE)
-  start_date    DateTime     @default(now())
-  end_date      DateTime?    @db.Timestamp(6)
-  billing_cycle BillingCycle @default(MONTHLY)
-  created_at    DateTime     @default(now()) @db.Timestamp(6)
-  updated_at    DateTime     @default(now()) @db.Timestamp(6)
-  recurring_id  String       @db.VarChar(255)
-  invoices      invoices[]
-  users         users?        @relation(fields: [user_id], references: [id], onDelete: Cascade)
-  servers       servers?      @relation(fields: [server_id], references: [id], onDelete: Cascade)
-  games         Game?         @relation(fields: [game_id], references: [id], onDelete: Cascade)
+  startDate     DateTime     @default(now()) @map("start_date")
+  endDate       DateTime?    @map("end_date") @db.Timestamp(6)
+  billingCycle  BillingCycle @default(MONTHLY) @map("billing_cycle")
+  createdAt     DateTime     @default(now()) @map("created_at") @db.Timestamp(6)
+  updatedAt     DateTime     @default(now()) @map("updated_at") @db.Timestamp(6)
+  recurringId   String?       @map("recurring_id") @db.VarChar(255)
 
-  @@index([user_id], name: "idx_order_user")
-  @@index([server_id], name: "idx_order_server")
-  @@index([status], name: "idx_order_status")
+  user    User?    @relation(fields: [userId], references: [id])
+  server  Server?  @relation(fields: [serverId], references: [id])
+  game    Game?    @relation(fields: [gameId], references: [id])
+  invoices Invoice[]
+
+  @@index([userId])
+  @@index([serverId])
+  @@index([status])
+  @@map("orders")
 }
 
+// Enums remain the same
 enum InvoiceStatus {
   pending
   created
@@ -186,5 +263,6 @@ enum OrderStatus {
 enum BillingCycle {
   MONTHLY
   QUARTERLY
+  SEMIANNUAL
   ANNUAL
 }

@@ -1,5 +1,5 @@
 import jwt from 'jsonwebtoken'
-import prisma from '~/server/lib/prisma'
+import { prisma } from '~/server/lib/prisma'
 
 export default defineNuxtRouteMiddleware((to) => {
   // console.log('Auth middleware executing for path:', event.path)

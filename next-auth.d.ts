@@ -5,6 +5,7 @@ declare module 'next-auth' {
   /* Returned by `useAuth`, `getSession` and `getServerSession` */
   interface Session extends DefaultSession {
     user: {
+      id: string
       name: string
       avatar: string
       role: 'admin' | 'manager' | 'user'

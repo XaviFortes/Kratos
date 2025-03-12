@@ -1,5 +1,5 @@
 import StripeService from '~/server/services/stripeService'
-import prisma from '~/server/lib/prisma'
+import { prisma } from '~/server/lib/prisma'
 import Stripe from 'stripe'
 
 const stripe = new StripeService()

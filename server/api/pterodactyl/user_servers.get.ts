@@ -1,5 +1,5 @@
 import jwt from 'jsonwebtoken'
-import prisma from '~/server/lib/prisma'
+import { prisma } from '~/server/lib/prisma'
 import { PterodactylService } from '~/server/services/pterodactyl'
 
 export default defineEventHandler(async (event) => {

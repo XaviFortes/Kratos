@@ -1,12 +1,16 @@
 // import GithubProvider from 'next-auth/providers/github'
 // import CredentialsProvider from 'next-auth/providers/credentials'
 import { NuxtAuthHandler } from '#auth'
+import { PrismaAdapter } from "@auth/prisma-adapter"
+import { prisma } from "~/server/lib/prisma"
+// import { prisma } from "@/prisma"
 import DiscordProvider from 'next-auth/providers/discord'
+import GithubProvider from 'next-auth/providers/github'
 
 export default NuxtAuthHandler({
     // A secret string you define, to ensure correct encryption
-    //   secret: process.env.SECRET!,
-    secret: useRuntimeConfig().authSecret,
+      secret: process.env.SECRET!,
+    // secret: useRuntimeConfig().authSecret,
     // pages: {
         // signIn: '/api/auth/signIn',
         // signOut: '/api/auth/signOut',
@@ -14,16 +18,17 @@ export default NuxtAuthHandler({
         // verifyRequest: '/api/auth/verify-request',
         // newUser: '/api/auth/new-user'
     // },
+    adapter: PrismaAdapter(prisma) as any,
     providers: [
         // @ts-expect-error Use .default here for it to work during SSR.
         DiscordProvider.default({
             clientId: process.env.DISCORD_ID!, // Your Discord application ID
             clientSecret: process.env.DISCORD_SECRET! // Your Discord application secret
         }),
-        // GithubProvider.default({
-        //   clientId: process.env.GH!,
-        //   clientSecret: 'your-client-secret'
-        // }),
+        GithubProvider.default({
+          clientId: process.env.GH_ID!,
+          clientSecret: process.env.GH_SECRET!
+        }),
         /*
         CredentialsProvider({
             credentials: {
@@ -44,7 +49,30 @@ export default NuxtAuthHandler({
         },
         /* on session retrival */
         async session({ session, user, token }) {
+            // Add custom session properties
+            if (session.user) {
+                session.user.id = user?.id || token.sub as string
+                // Add any other custom user properties you need
+            }
+            // Token we injected into the JWT callback above.
+            if (token) {
+                const token2 = token.sessionToken
+                // Fetch data OR add previous data from the JWT callback.
+                const additionalUserData = await $fetch<{ name: string, avatar: string, role: string }>(`/api/session/${token2}`)
+                
+                
+                return {
+                    ...session,
+                    user: {
+                        name: additionalUserData.name,
+                        avatar: additionalUserData.avatar,
+                        role: additionalUserData.role
+                    }
+                }
+            }
             return session
+            
+            // return session
         },
         // async session({ session, user, token }) {
             // const token2 = token.sessionToken
@@ -63,6 +91,13 @@ export default NuxtAuthHandler({
         // },
         /* on JWT token creation or mutation */
         async jwt({ token, user, account, profile, isNewUser }) {
+            // Add custom JWT properties
+            if (account) {
+                token.sessionToken = account.session_token
+            }
+            if (user) {
+              token.sub = user.id
+            }
             return token
         }
     },

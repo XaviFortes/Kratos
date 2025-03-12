@@ -1,5 +1,5 @@
 // server/api/invoices.get.js
-import prisma from '../../lib/prisma'
+import { prisma } from '~/server/lib/prisma'
 import jwt from 'jsonwebtoken'
 
 export default defineEventHandler(async (event) => {

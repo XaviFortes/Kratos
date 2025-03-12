@@ -1,4 +1,4 @@
-import prisma from '../../lib/prisma'
+import { prisma } from '~/server/lib/prisma'
 import { calculatePrice } from '~/server/services/pricingServices'
 import jwt from 'jsonwebtoken'
 

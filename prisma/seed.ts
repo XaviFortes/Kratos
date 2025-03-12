@@ -1,5 +1,4 @@
-import prismaClient from '../server/lib/prisma'
-const prisma = prismaClient
+import { prisma } from '~/server/lib/prisma'
 
 
 async function seed() {

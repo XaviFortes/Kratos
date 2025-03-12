@@ -73,6 +73,10 @@
                 >
                   Invoices
                 </NuxtLink>
+                <NuxtLink to="/dashboard/settings" class="nav-link">
+                  <Icon name="mdi:account-cog" class="mr-2" />
+                  Settings
+                </NuxtLink>
                 <a 
                   href="/api/auth/signout" 
                   class="block px-4 py-2 text-gray-300 hover:bg-gray-800 hover:text-white">
@@ -145,12 +149,16 @@
             >
               Invoices
             </NuxtLink>
-            <NuxtLink 
+            <NuxtLink to="/dashboard/settings" class="nav-link">
+              <Icon name="mdi:account-cog" class="mr-2" />
+              Settings
+            </NuxtLink>
+            <a 
               to="/api/auth/signout" 
               class="block px-4 py-2 text-gray-300 hover:text-white"
             >
               Logout
-            </NuxtLink>
+            </a>
             <!-- <button  -->
               <!-- @click="auth.logout()"  -->
               <!-- class="block w-full text-left px-4 py-2 text-gray-300 hover:text-white" -->

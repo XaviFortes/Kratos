@@ -1,5 +1,5 @@
 import { H3Event, EventHandlerRequest } from "h3"
-import prisma from "~/server/lib/prisma"
+import { prisma } from "~/server/lib/prisma"
 
 export default defineEventHandler(async (event) => {
     const session = await getServerSession(event)

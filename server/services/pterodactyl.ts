@@ -1,7 +1,7 @@
 import { ofetch } from 'ofetch'
 import { servers, users } from '@prisma/client'
-import prisma from '../lib/prisma'
 import { Allocation, NodeResource, NodeWithLocation, PterodactylServer, ServerCreateParams } from '~/types/pterodactyl'
+import { prisma } from '~/server/lib/prisma'
 
 export class PterodactylService {
   private readonly config = {

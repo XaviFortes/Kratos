@@ -1,5 +1,5 @@
 // server/api/pterodactyl/debug.post.ts
-import prisma from '~/server/lib/prisma'
+import { prisma } from '~/server/lib/prisma'
 import { PterodactylService } from '../../services/pterodactyl'
 import jwt from 'jsonwebtoken'
 

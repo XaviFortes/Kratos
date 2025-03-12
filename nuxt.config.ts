@@ -15,6 +15,7 @@ export default defineNuxtConfig({
 
     // '/dashboard': { ssr: false },
     '/dashboard/**': {
+      ssr: false,
       cors: true,
       headers: {
         'Access-Control-Allow-Credentials': 'true',
@@ -37,6 +38,7 @@ export default defineNuxtConfig({
   auth: {
     isEnabled: true,
     disableServerSideAuth: false,
+    globalAppMiddleware: true,
     originEnvKey: 'AUTH_ORIGIN',
     baseURL: 'http://localhost:3000/api/auth',
     // provider: { /* your provider config */ },
@@ -47,7 +49,7 @@ export default defineNuxtConfig({
       addDefaultCallbackUrl: true
     },
     sessionRefresh: {
-      enablePeriodically: true,
+      enablePeriodically: false,
       enableOnWindowFocus: true,
     },
   },
