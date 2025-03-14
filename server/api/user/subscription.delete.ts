@@ -1,24 +1,19 @@
-import { H3Event, EventHandlerRequest } from "h3"
 import { prisma } from "~/server/lib/prisma"
-import StripeService from "~/server/services/stripeService"
+import { stripe } from "~/server/services/stripeService"
+import { getServerSession } from "#auth"
 
 export default defineEventHandler(async (event) => {
-    const session = await getServerSession(event)
+    const session = await getServerSession(event as any)
     if (!session?.user) throw createError({ statusCode: 401 })
 
-    const stripe = new StripeService()
-    const subscription = await prisma.Subscription.findFirst({
+    const subscription = await prisma.subscription.findFirst({
         where: { userId: session.user.id }
     })
 
     if (subscription) {
-        await stripe.cancelSubscription(subscription.stripeSubscription)
+        // await stripe.cancelStripeSubscription(subscription.stripeSubscriptionId)
         return { success: true }
     }
 
     throw createError({ statusCode: 404, message: 'No subscription found' })
 })
-
-function getServerSession(event: H3Event<EventHandlerRequest>) {
-    throw new Error("Function not implemented.")
-}

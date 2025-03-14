@@ -6,7 +6,7 @@ export default defineEventHandler(async (event) => {
   const userId = getRouterParam(event, 'id')
   
   // Verify user is accessing their own profile
-  const session = await getServerSession(event)
+  const session = await getServerSession(event as any)
   if (session?.user?.id !== userId) {
     throw createError({ statusCode: 403, message: 'Unauthorized' })
   }

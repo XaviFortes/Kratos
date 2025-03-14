@@ -73,7 +73,7 @@
                 >
                   Invoices
                 </NuxtLink>
-                <NuxtLink to="/dashboard/settings" class="nav-link">
+                <NuxtLink to="/dashboard/settings" class="block px-4 py-3 text-gray-300 hover:bg-gray-800 hover:text-white">
                   <Icon name="mdi:account-cog" class="mr-2" />
                   Settings
                 </NuxtLink>

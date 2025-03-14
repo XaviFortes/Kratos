@@ -1,49 +1,91 @@
+// ~/server/api/payments/checkout.post.ts
 import { prisma } from "~/server/lib/prisma"
-import StripeService from "~/server/services/stripeService"
+import { stripe } from "~/server/services/stripeService"
+import type { User } from '@prisma/client'
+import type Stripe from 'stripe'
+import { BillingCycle, OrderStatus, SubStatus, InvoiceStatus } from '@prisma/client'
+
+// Map Stripe status to our SubStatus enum
+const mapStripeStatus = (status: Stripe.Subscription.Status): SubStatus => {
+  switch (status) {
+    case 'active': return SubStatus.active
+    case 'past_due': return SubStatus.past_due
+    case 'unpaid': return SubStatus.unpaid
+    case 'canceled': return SubStatus.canceled
+    case 'incomplete': return SubStatus.incomplete
+    case 'incomplete_expired': return SubStatus.incomplete_expired
+    case 'trialing': return SubStatus.trialing
+    default: return SubStatus.active
+  }
+}
 
 export default defineEventHandler(async (event) => {
     const body = await readBody(event)
-    const stripe = new StripeService()
+    const user = event.context.user as User
 
-    const user = event.context.user
-    if (!user) throw createError({ statusCode: 401, message: 'Unauthorized' })
+    if (!user) {
+        throw createError({ statusCode: 401, message: 'Unauthorized' })
+    }
 
     // Create or get Stripe customer
     let customerId = user.stripeCustomerId
     if (!customerId) {
-        const customer = await stripe.createCustomer(user.email, `${user.firstName} ${user.lastName}`)
-        await prisma.users.update({
+        const customer = await stripe.customers.create({
+            email: user.email,
+            name: `${user.firstName} ${user.lastName}`,
+            metadata: { userId: user.id }
+        })
+        
+        await prisma.user.update({
             where: { id: user.id },
-            data: { stripe_customer_id: customer.id }
+            data: { stripeCustomerId: customer.id }
         })
         customerId = customer.id
     }
 
+    // Create Stripe subscription
+    const subscription = await stripe.subscriptions.create({
+        customer: customerId,
+        items: [{ price: body.priceId }],
+        payment_behavior: 'default_incomplete',
+        expand: ['latest_invoice.payment_intent']
+    })
 
-    // Create subscription
-    const subscription = await stripe.createSubscription(customerId, body.priceId)
-    if (!subscription) throw createError({ statusCode: 400, message: 'Failed to create subscription' })
-    console.log(subscription)
-    
+    // Cast to Stripe.Invoice and Stripe.PaymentIntent for TypeScript
+    const latestInvoice = subscription.latest_invoice as Stripe.Invoice
+    const paymentIntent = latestInvoice.payment_intent as Stripe.PaymentIntent
 
-    // Create invoice
-    await prisma.invoices.create({
+    // Create order first
+    const order = await prisma.order.create({
         data: {
-            user_id: { connect: { id: user.id } },
-            amount: subscription.latest_invoice?.amount_due / 100,
-            status: 'created',
-            stripeId: subscription.latest_invoice.id,
-            items: body.config,
+            userId: user.id,
+            poNumber: `PO-${Date.now().toString(36).toUpperCase()}`,
+            status: OrderStatus.ACTIVE, // Use enum value
+            billingCycle: BillingCycle.MONTHLY, // Use enum value
             subscription: {
                 create: {
-                    stripeSubscription: subscription.id,
-                    status: subscription.status,
+                    stripeSubscriptionId: subscription.id,
+                    status: mapStripeStatus(subscription.status), // Convert Stripe status to our enum
                     currentPeriodEnd: new Date(subscription.current_period_end * 1000),
-                    user: { connect: { id: session.user.id } }
+                    userId: user.id
                 }
             }
         }
     })
 
-    return { url: subscription.latest_invoice.payment_intent.client_secret }
+    // Create invoice and link to order
+    const invoice = await prisma.invoice.create({
+        data: {
+            amount: latestInvoice.amount_due / 100,
+            status: InvoiceStatus.CREATED,
+            stripePaymentIntentId: paymentIntent.id,
+            userId: user.id,
+            orderId: order.id
+        }
+    })
+
+    return {
+        clientSecret: paymentIntent.client_secret,
+        invoiceId: invoice.id
+    }
 })
