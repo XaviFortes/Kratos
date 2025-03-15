@@ -53,6 +53,7 @@ model User {
   invoices      Invoice[]
   subscriptions Subscription[]
   hosts         Host[]          @relation("HostOwner") // For dedicated servers
+  Cart Cart[] // For cart functionality
   Account       Account[]
   Session       Session[]
   Authenticator Authenticator[]
@@ -120,6 +121,8 @@ model PricingPlan {
   orders Order[]
 
   @@map("pricing_plans")
+  CartItem CartItem[]
+  OrderItem OrderItem[]
 }
 
 model NetworkConfig {
@@ -138,6 +141,9 @@ model NetworkConfig {
 model Order {
   id        String      @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   status    OrderStatus @default(PENDING)
+  totalAmount  Decimal
+  stripeSessionId String?
+  items       OrderItem[]
   createdAt DateTime    @default(now()) @map("created_at")
   updatedAt DateTime    @default(now()) @map("updated_at")
 
@@ -156,6 +162,18 @@ model Order {
   @@index([status])
   @@map("orders")
 }
+
+model OrderItem {
+  id           String  @id @default(dbgenerated("gen_random_uuid()"))
+  order        Order   @relation(fields: [orderId], references: [id])
+  orderId      String
+  plan         PricingPlan @relation(fields: [planId], references: [id])
+  planId       String
+  configuration Json
+  unitPrice    Decimal
+  quantity     Int
+}
+
 
 // Updated Invoice model
 model Invoice {
@@ -203,6 +221,27 @@ model Subscription {
   @@index([userId])
   @@index([orderId])
   @@map("subscriptions")
+}
+
+model Cart {
+  id        String    @id @default(dbgenerated("gen_random_uuid()"))
+  user      User      @relation(fields: [userId], references: [id])
+  userId    String
+  items     CartItem[]
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @default(now())
+}
+
+model CartItem {
+  id           String  @id @default(dbgenerated("gen_random_uuid()"))
+  cart         Cart    @relation(fields: [cartId], references: [id])
+  cartId       String
+  plan         PricingPlan @relation(fields: [planId], references: [id])
+  planId       String
+  configuration Json
+  quantity     Int     @default(1)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @default(now())
 }
 
 ///////////////////////////////////////////
