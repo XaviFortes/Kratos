@@ -29,8 +29,6 @@ CREATE TABLE "users" (
     "zip_code" VARCHAR(20),
     "country" VARCHAR(50),
     "tax_id" VARCHAR(50),
-    "invoice_ninja_client_id" VARCHAR(255),
-    "pterodactyl_user_id" VARCHAR(255),
     "stripe_customer_id" VARCHAR(255),
     "is_admin" BOOLEAN NOT NULL DEFAULT false,
     "created_at" TIMESTAMP(6) NOT NULL DEFAULT CURRENT_TIMESTAMP,
@@ -95,21 +93,19 @@ CREATE TABLE "authenticators" (
 -- CreateTable
 CREATE TABLE "invoices" (
     "id" UUID NOT NULL DEFAULT gen_random_uuid(),
+    "amount" DECIMAL(10,2) NOT NULL,
+    "status" "InvoiceStatus" NOT NULL DEFAULT 'PENDING',
+    "due_date" TIMESTAMP(6),
+    "paid_at" TIMESTAMP(6),
+    "payment_method" VARCHAR(50),
+    "stripe_payment_intent_id" TEXT,
+    "metadata" JSONB,
+    "created_at" TIMESTAMP(6) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updated_at" TIMESTAMP(6) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "order_id" UUID NOT NULL,
     "user_id" UUID NOT NULL,
     "server_id" UUID,
-    "invoice_ninja_id" VARCHAR(255),
-    "stripe_payment_intent_id" TEXT,
-    "stripe_customer_id" TEXT,
-    "amount" DECIMAL(10,2) NOT NULL,
-    "status" "InvoiceStatus" NOT NULL DEFAULT 'PENDING',
-    "metadata" JSONB,
-    "created_at" TIMESTAMP(6) DEFAULT CURRENT_TIMESTAMP,
-    "updated_at" TIMESTAMP(6) DEFAULT CURRENT_TIMESTAMP,
-    "payment_date" TIMESTAMP(6),
-    "due_date" TIMESTAMP(6),
-    "subscription_id" UUID,
-    "game_id" UUID,
+    "product_id" UUID,
 
     CONSTRAINT "invoices_pkey" PRIMARY KEY ("id")
 );
@@ -117,13 +113,13 @@ CREATE TABLE "invoices" (
 -- CreateTable
 CREATE TABLE "subscriptions" (
     "id" UUID NOT NULL DEFAULT gen_random_uuid(),
-    "user_id" UUID NOT NULL,
-    "order_id" UUID NOT NULL,
-    "stripe_subscription" VARCHAR(255) NOT NULL,
+    "stripe_subscription_id" VARCHAR(255) NOT NULL,
     "status" "SubStatus" NOT NULL DEFAULT 'active',
     "current_period_end" TIMESTAMP(6) NOT NULL,
-    "created_at" TIMESTAMP(6) DEFAULT CURRENT_TIMESTAMP,
-    "updated_at" TIMESTAMP(6) DEFAULT CURRENT_TIMESTAMP,
+    "created_at" TIMESTAMP(6) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updated_at" TIMESTAMP(6) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "order_id" UUID NOT NULL,
+    "user_id" UUID NOT NULL,
 
     CONSTRAINT "subscriptions_pkey" PRIMARY KEY ("id")
 );
@@ -132,7 +128,7 @@ CREATE TABLE "subscriptions" (
 CREATE TABLE "servers" (
     "id" UUID NOT NULL DEFAULT gen_random_uuid(),
     "user_id" UUID NOT NULL,
-    "game_type" VARCHAR(50) NOT NULL,
+    "name" VARCHAR(255) NOT NULL,
     "config" JSONB NOT NULL,
     "pterodactyl_server_id" VARCHAR(255),
     "status" VARCHAR(20) DEFAULT 'pending',
@@ -143,21 +139,22 @@ CREATE TABLE "servers" (
 );
 
 -- CreateTable
-CREATE TABLE "Game" (
+CREATE TABLE "Product" (
     "id" UUID NOT NULL DEFAULT gen_random_uuid(),
     "name" TEXT NOT NULL,
     "slug" TEXT NOT NULL,
+    "config" JSONB,
     "basePrice" DECIMAL(10,2) NOT NULL,
     "created_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "updated_at" TIMESTAMP(3) NOT NULL,
 
-    CONSTRAINT "Game_pkey" PRIMARY KEY ("id")
+    CONSTRAINT "Product_pkey" PRIMARY KEY ("id")
 );
 
 -- CreateTable
 CREATE TABLE "PricingTier" (
     "id" TEXT NOT NULL DEFAULT gen_random_uuid(),
-    "game_id" UUID NOT NULL,
+    "product_id" UUID NOT NULL,
     "type" TEXT NOT NULL,
     "label" TEXT NOT NULL,
     "value" TEXT NOT NULL,
@@ -171,7 +168,7 @@ CREATE TABLE "PricingTier" (
 -- CreateTable
 CREATE TABLE "PriceModifier" (
     "id" TEXT NOT NULL DEFAULT gen_random_uuid(),
-    "game_id" UUID NOT NULL,
+    "product_id" UUID NOT NULL,
     "type" TEXT NOT NULL,
     "condition" JSONB,
     "value" DECIMAL(10,2) NOT NULL,
@@ -185,18 +182,16 @@ CREATE TABLE "PriceModifier" (
 -- CreateTable
 CREATE TABLE "orders" (
     "id" UUID NOT NULL DEFAULT gen_random_uuid(),
-    "user_id" UUID NOT NULL,
     "po_number" VARCHAR(255) NOT NULL,
-    "server_id" UUID,
-    "game_id" UUID,
     "status" "OrderStatus" NOT NULL DEFAULT 'ACTIVE',
-    "start_date" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    "end_date" TIMESTAMP(6),
     "billing_cycle" "BillingCycle" NOT NULL DEFAULT 'MONTHLY',
+    "start_date" TIMESTAMP(6) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "end_date" TIMESTAMP(6),
     "created_at" TIMESTAMP(6) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "updated_at" TIMESTAMP(6) NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    "subscription_id" UUID,
-    "recurring_id" VARCHAR(255),
+    "user_id" UUID NOT NULL,
+    "server_id" UUID,
+    "product_id" UUID,
 
     CONSTRAINT "orders_pkey" PRIMARY KEY ("id")
 );
@@ -214,31 +209,28 @@ CREATE UNIQUE INDEX "authenticators_credentialID_key" ON "authenticators"("crede
 CREATE UNIQUE INDEX "invoices_stripe_payment_intent_id_key" ON "invoices"("stripe_payment_intent_id");
 
 -- CreateIndex
-CREATE INDEX "invoices_status_idx" ON "invoices"("status");
+CREATE INDEX "invoices_order_id_idx" ON "invoices"("order_id");
 
 -- CreateIndex
 CREATE INDEX "invoices_user_id_idx" ON "invoices"("user_id");
 
 -- CreateIndex
-CREATE INDEX "invoices_order_id_idx" ON "invoices"("order_id");
-
--- CreateIndex
-CREATE UNIQUE INDEX "invoices_invoice_ninja_id_key" ON "invoices"("invoice_ninja_id");
-
--- CreateIndex
-CREATE UNIQUE INDEX "subscriptions_stripe_subscription_key" ON "subscriptions"("stripe_subscription");
+CREATE UNIQUE INDEX "subscriptions_stripe_subscription_id_key" ON "subscriptions"("stripe_subscription_id");
 
 -- CreateIndex
 CREATE INDEX "subscriptions_user_id_idx" ON "subscriptions"("user_id");
 
 -- CreateIndex
-CREATE INDEX "subscriptions_status_idx" ON "subscriptions"("status");
+CREATE INDEX "subscriptions_order_id_idx" ON "subscriptions"("order_id");
+
+-- CreateIndex
+CREATE UNIQUE INDEX "subscriptions_order_id_key" ON "subscriptions"("order_id");
 
 -- CreateIndex
 CREATE INDEX "servers_user_id_idx" ON "servers"("user_id");
 
 -- CreateIndex
-CREATE UNIQUE INDEX "Game_slug_key" ON "Game"("slug");
+CREATE UNIQUE INDEX "Product_slug_key" ON "Product"("slug");
 
 -- CreateIndex
 CREATE INDEX "orders_user_id_idx" ON "orders"("user_id");
@@ -259,19 +251,19 @@ ALTER TABLE "sessions" ADD CONSTRAINT "sessions_userId_fkey" FOREIGN KEY ("userI
 ALTER TABLE "authenticators" ADD CONSTRAINT "authenticators_userId_fkey" FOREIGN KEY ("userId") REFERENCES "users"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- AddForeignKey
+ALTER TABLE "invoices" ADD CONSTRAINT "invoices_order_id_fkey" FOREIGN KEY ("order_id") REFERENCES "orders"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+
+-- AddForeignKey
 ALTER TABLE "invoices" ADD CONSTRAINT "invoices_user_id_fkey" FOREIGN KEY ("user_id") REFERENCES "users"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
 
 -- AddForeignKey
 ALTER TABLE "invoices" ADD CONSTRAINT "invoices_server_id_fkey" FOREIGN KEY ("server_id") REFERENCES "servers"("id") ON DELETE SET NULL ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE "invoices" ADD CONSTRAINT "invoices_game_id_fkey" FOREIGN KEY ("game_id") REFERENCES "Game"("id") ON DELETE SET NULL ON UPDATE CASCADE;
+ALTER TABLE "invoices" ADD CONSTRAINT "invoices_product_id_fkey" FOREIGN KEY ("product_id") REFERENCES "Product"("id") ON DELETE SET NULL ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE "invoices" ADD CONSTRAINT "invoices_order_id_fkey" FOREIGN KEY ("order_id") REFERENCES "orders"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
-
--- AddForeignKey
-ALTER TABLE "invoices" ADD CONSTRAINT "invoices_subscription_id_fkey" FOREIGN KEY ("subscription_id") REFERENCES "subscriptions"("id") ON DELETE SET NULL ON UPDATE CASCADE;
+ALTER TABLE "subscriptions" ADD CONSTRAINT "subscriptions_order_id_fkey" FOREIGN KEY ("order_id") REFERENCES "orders"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
 
 -- AddForeignKey
 ALTER TABLE "subscriptions" ADD CONSTRAINT "subscriptions_user_id_fkey" FOREIGN KEY ("user_id") REFERENCES "users"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
@@ -280,10 +272,10 @@ ALTER TABLE "subscriptions" ADD CONSTRAINT "subscriptions_user_id_fkey" FOREIGN 
 ALTER TABLE "servers" ADD CONSTRAINT "servers_user_id_fkey" FOREIGN KEY ("user_id") REFERENCES "users"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE "PricingTier" ADD CONSTRAINT "PricingTier_game_id_fkey" FOREIGN KEY ("game_id") REFERENCES "Game"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+ALTER TABLE "PricingTier" ADD CONSTRAINT "PricingTier_product_id_fkey" FOREIGN KEY ("product_id") REFERENCES "Product"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE "PriceModifier" ADD CONSTRAINT "PriceModifier_game_id_fkey" FOREIGN KEY ("game_id") REFERENCES "Game"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+ALTER TABLE "PriceModifier" ADD CONSTRAINT "PriceModifier_product_id_fkey" FOREIGN KEY ("product_id") REFERENCES "Product"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
 
 -- AddForeignKey
 ALTER TABLE "orders" ADD CONSTRAINT "orders_user_id_fkey" FOREIGN KEY ("user_id") REFERENCES "users"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
@@ -292,7 +284,4 @@ ALTER TABLE "orders" ADD CONSTRAINT "orders_user_id_fkey" FOREIGN KEY ("user_id"
 ALTER TABLE "orders" ADD CONSTRAINT "orders_server_id_fkey" FOREIGN KEY ("server_id") REFERENCES "servers"("id") ON DELETE SET NULL ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE "orders" ADD CONSTRAINT "orders_game_id_fkey" FOREIGN KEY ("game_id") REFERENCES "Game"("id") ON DELETE SET NULL ON UPDATE CASCADE;
-
--- AddForeignKey
-ALTER TABLE "orders" ADD CONSTRAINT "orders_subscription_id_fkey" FOREIGN KEY ("subscription_id") REFERENCES "subscriptions"("id") ON DELETE SET NULL ON UPDATE CASCADE;
+ALTER TABLE "orders" ADD CONSTRAINT "orders_product_id_fkey" FOREIGN KEY ("product_id") REFERENCES "Product"("id") ON DELETE SET NULL ON UPDATE CASCADE;

@@ -127,8 +127,8 @@ model Invoice {
   user     User    @relation(fields: [userId], references: [id])
   serverId String? @map("server_id") @db.Uuid
   server   Server? @relation("ServerInvoices", fields: [serverId], references: [id])
-  gameId   String? @map("game_id") @db.Uuid
-  game     Game?   @relation("GameInvoices", fields: [gameId], references: [id])
+  productId   String? @map("product_id") @db.Uuid
+  product     Product?   @relation("ProductInvoices", fields: [productId], references: [id])
 
   @@index([orderId])
   @@index([userId])
@@ -158,7 +158,7 @@ model Subscription {
 model Server {
   id                  String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   userId              String    @map("user_id") @db.Uuid
-  gameType            String    @map("game_type") @db.VarChar(50)
+  name                String    @db.VarChar(255)
   config              Json
   pterodactylServerId String?   @map("pterodactyl_server_id") @db.VarChar(255)
   status              String?   @default("pending") @db.VarChar(20)
@@ -173,23 +173,25 @@ model Server {
   @@map("servers")
 }
 
-model Game {
+model Product {
   id        String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   name      String
   slug      String   @unique
+  config    Json?
   basePrice Decimal  @db.Decimal(10, 2)
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt @map("updated_at")
 
   pricingTiers PricingTier[]
   modifiers    PriceModifier[]
-  invoices     Invoice[]       @relation("GameInvoices") // Named relation
+  invoices     Invoice[]       @relation("ProductInvoices") // Named relation
   orders       Order[]
+	@@map("Product")
 }
 
 model PricingTier {
   id        String   @id @default(dbgenerated("gen_random_uuid()"))
-  gameId    String   @map("game_id") @db.Uuid
+  productId    String   @map("product_id") @db.Uuid
   type      String
   label     String
   value     String
@@ -197,12 +199,12 @@ model PricingTier {
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt @map("updated_at")
 
-  game Game @relation(fields: [gameId], references: [id])
+  product Product @relation(fields: [productId], references: [id])
 }
 
 model PriceModifier {
   id          String   @id @default(dbgenerated("gen_random_uuid()"))
-  gameId      String   @map("game_id") @db.Uuid
+  productId      String   @map("product_id") @db.Uuid
   type        String
   condition   Json?
   value       Decimal  @db.Decimal(10, 2)
@@ -210,7 +212,7 @@ model PriceModifier {
   createdAt   DateTime @default(now()) @map("created_at")
   updatedAt   DateTime @updatedAt @map("updated_at")
 
-  game Game @relation(fields: [gameId], references: [id])
+  product Product @relation(fields: [productId], references: [id])
 }
 
 model Order {
@@ -228,8 +230,8 @@ model Order {
   user         User          @relation(fields: [userId], references: [id])
   serverId     String?       @map("server_id") @db.Uuid
   server       Server?       @relation(fields: [serverId], references: [id])
-  gameId       String?       @map("game_id") @db.Uuid
-  game         Game?         @relation(fields: [gameId], references: [id])
+  productId       String?       @map("product_id") @db.Uuid
+  product         Product?         @relation(fields: [productId], references: [id])
   invoices     Invoice[]
   subscription Subscription?
 
