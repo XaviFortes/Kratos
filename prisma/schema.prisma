@@ -52,7 +52,10 @@ model User {
   orders        Order[]
   invoices      Invoice[]
   subscriptions Subscription[]
-  hosts         Host[]      @relation("HostOwner") // For dedicated servers
+  hosts         Host[]          @relation("HostOwner") // For dedicated servers
+  Account       Account[]
+  Session       Session[]
+  Authenticator Authenticator[]
 
   @@map("users")
 }
@@ -64,67 +67,68 @@ model DataCenter {
   createdAt DateTime @default(now()) @map("created_at")
 
   hosts Host[]
-  
+
   @@map("data_centers")
 }
 
 model Host {
-  id            String         @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  hostname      String         @unique
-  dataCenterId  String         @map("data_center_id") @db.Uuid
-  spec          Json           // { cpu: 128, ramGB: 512, storageTB: 100 }
-  status        ResourceStatus @default(AVAILABLE)
-  createdAt     DateTime       @default(now()) @map("created_at")
-  
-  dataCenter  DataCenter @relation(fields: [dataCenterId], references: [id])
-  services    Service[]
-  owner       User?      @relation("HostOwner", fields: [ownerId], references: [id])
-  ownerId     String?    @map("owner_id") @db.Uuid // For dedicated servers
+  id           String         @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  hostname     String         @unique
+  dataCenterId String         @map("data_center_id") @db.Uuid
+  spec         Json // { cpu: 128, ramGB: 512, storageTB: 100 }
+  status       ResourceStatus @default(AVAILABLE)
+  createdAt    DateTime       @default(now()) @map("created_at")
+
+  dataCenter DataCenter @relation(fields: [dataCenterId], references: [id])
+  services   Service[]
+  owner      User?      @relation("HostOwner", fields: [ownerId], references: [id])
+  ownerId    String?    @map("owner_id") @db.Uuid // For dedicated servers
 
   @@map("hosts")
 }
 
 model Service {
-  id               String       @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  type             ServiceType
-  userId           String       @map("user_id") @db.Uuid
-  hostId           String?      @map("host_id") @db.Uuid
-  config           Json         // Game: { game: 'minecraft', slots: 50 }, VPS: { os: 'ubuntu', cpu: 4 }
-  terminationDate  DateTime?    @map("termination_date")
-  renewedAt        DateTime?    @map("renewed_at")
-  createdAt        DateTime     @default(now()) @map("created_at")
-  updatedAt        DateTime     @default(now()) @map("updated_at")
+  id              String      @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  type            ServiceType
+  userId          String      @map("user_id") @db.Uuid
+  hostId          String?     @map("host_id") @db.Uuid
+  config          Json // Game: { game: 'minecraft', slots: 50 }, VPS: { os: 'ubuntu', cpu: 4 }
+  terminationDate DateTime?   @map("termination_date")
+  renewedAt       DateTime?   @map("renewed_at")
+  createdAt       DateTime    @default(now()) @map("created_at")
+  updatedAt       DateTime    @default(now()) @map("updated_at")
 
-  user      User     @relation(fields: [userId], references: [id])
-  host      Host?    @relation(fields: [hostId], references: [id])
-  orders    Order[]
-  invoices  Invoice[]
-  network   NetworkConfig?
-  
+  user         User           @relation(fields: [userId], references: [id])
+  host         Host?          @relation(fields: [hostId], references: [id])
+  orders       Order[]
+  invoices     Invoice[]
+  network      NetworkConfig?
+  Subscription Subscription[]
+
   @@map("services")
 }
 
 model PricingPlan {
-  id             String       @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  serviceType    ServiceType  @map("service_type")
-  name           String       @unique
-  configTemplate Json         @map("config_template")
-  priceHourly    Decimal      @map("price_hourly") @db.Decimal(10,4)
-  priceMonthly   Decimal      @map("price_monthly") @db.Decimal(10,4)
-  specs          Json         // { minCpu: 2, maxCpu: 8, baseStorage: 100 }
-  
+  id             String      @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  serviceType    ServiceType @map("service_type")
+  name           String      @unique
+  configTemplate Json        @map("config_template")
+  priceHourly    Decimal     @map("price_hourly") @db.Decimal(10, 4)
+  priceMonthly   Decimal     @map("price_monthly") @db.Decimal(10, 4)
+  specs          Json // { minCpu: 2, maxCpu: 8, baseStorage: 100 }
+
   orders Order[]
 
   @@map("pricing_plans")
 }
 
 model NetworkConfig {
-  id        String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  serviceId String   @map("service_id") @db.Uuid @unique
+  id        String  @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  serviceId String  @unique @map("service_id") @db.Uuid
   ipv4      String?
   ipv6      String?
-  ports     Json?    // { tcp: [25565, 27015], udp: [27015] }
-  
+  ports     Json? // { tcp: [25565, 27015], udp: [27015] }
+
   service Service @relation(fields: [serviceId], references: [id])
 
   @@map("network_configs")
@@ -132,10 +136,10 @@ model NetworkConfig {
 
 // Updated Order model
 model Order {
-  id           String       @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  status       OrderStatus  @default(PENDING)
-  createdAt    DateTime     @default(now()) @map("created_at")
-  updatedAt    DateTime     @default(now()) @map("updated_at")
+  id        String      @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  status    OrderStatus @default(PENDING)
+  createdAt DateTime    @default(now()) @map("created_at")
+  updatedAt DateTime    @default(now()) @map("updated_at")
 
   // Relations
   userId       String        @map("user_id") @db.Uuid
@@ -166,11 +170,11 @@ model Invoice {
   updatedAt             DateTime      @default(now()) @map("updated_at")
 
   // Relations
-  orderId  String  @map("order_id") @db.Uuid
-  order    Order   @relation(fields: [orderId], references: [id])
-  userId   String  @map("user_id") @db.Uuid
-  user     User    @relation(fields: [userId], references: [id])
-  serviceId String? @map("service_id") @db.Uuid
+  orderId   String   @map("order_id") @db.Uuid
+  order     Order    @relation(fields: [orderId], references: [id])
+  userId    String   @map("user_id") @db.Uuid
+  user      User     @relation(fields: [userId], references: [id])
+  serviceId String?  @map("service_id") @db.Uuid
   service   Service? @relation(fields: [serviceId], references: [id])
 
   @@index([orderId])
@@ -188,12 +192,12 @@ model Subscription {
   updatedAt            DateTime  @default(now()) @map("updated_at")
 
   // Relations
-  orderId String @map("order_id") @db.Uuid
-  order   Order  @relation(fields: [orderId], references: [id])
-  userId  String @map("user_id") @db.Uuid
-  user    User   @relation(fields: [userId], references: [id])
-  serviceId String @map("service_id") @db.Uuid
-  service  Service @relation(fields: [serviceId], references: [id])
+  orderId   String  @map("order_id") @db.Uuid
+  order     Order   @relation(fields: [orderId], references: [id])
+  userId    String  @map("user_id") @db.Uuid
+  user      User    @relation(fields: [userId], references: [id])
+  serviceId String  @map("service_id") @db.Uuid
+  service   Service @relation(fields: [serviceId], references: [id])
 
   @@unique([orderId])
   @@index([userId])
@@ -263,6 +267,7 @@ model Authenticator {
   @@id([userId, credentialID])
   @@map("authenticators")
 }
+
 ///////////////////////////////////////////
 // AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA //
 ///////////////////////////////////////////
