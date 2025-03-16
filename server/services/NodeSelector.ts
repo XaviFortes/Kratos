@@ -2,7 +2,7 @@
 import { prisma } from "~/server/lib/prisma"
 
 interface HostRequirements {
-  cpu: number
+  cpu: number // 100 = 1 core
   memory: number // MB
   disk: number   // MB
   location: string

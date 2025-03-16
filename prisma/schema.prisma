@@ -39,7 +39,7 @@ model User {
   image            String?
   passwordHash     String?   @map("password_hash") @db.VarChar(255)
   // Consolidated address storage
-  billingAddress   Json?
+  billingInfo   Json?
   // Integration IDs
   stripeCustomerId String?   @map("stripe_customer_id") @db.VarChar(255)
   isAdmin          Boolean   @default(false) @map("is_admin")
@@ -53,7 +53,7 @@ model User {
   invoices      Invoice[]
   subscriptions Subscription[]
   hosts         Host[]          @relation("HostOwner") // For dedicated servers
-  Cart Cart[] // For cart functionality
+  Cart          Cart? // For cart functionality
   Account       Account[]
   Session       Session[]
   Authenticator Authenticator[]
@@ -113,16 +113,17 @@ model PricingPlan {
   id             String      @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   serviceType    ServiceType @map("service_type")
   name           String      @unique
+  description    String    @map("description") @db.Text @default("")
   configTemplate Json        @map("config_template")
-  priceHourly    Decimal     @map("price_hourly") @db.Decimal(10, 4)
   priceMonthly   Decimal     @map("price_monthly") @db.Decimal(10, 4)
+  pricingModel   Json? // Add this new field
   specs          Json // { minCpu: 2, maxCpu: 8, baseStorage: 100 }
 
   orders Order[]
 
-  @@map("pricing_plans")
   CartItem CartItem[]
   OrderItem OrderItem[]
+  @@map("pricing_plans")
 }
 
 model NetworkConfig {
@@ -141,7 +142,7 @@ model NetworkConfig {
 model Order {
   id        String      @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   status    OrderStatus @default(PENDING)
-  totalAmount  Decimal
+  totalAmount  Decimal  @db.Decimal(10, 2)
   stripeSessionId String?
   items       OrderItem[]
   createdAt DateTime    @default(now()) @map("created_at")
@@ -166,12 +167,14 @@ model Order {
 model OrderItem {
   id           String  @id @default(dbgenerated("gen_random_uuid()"))
   order        Order   @relation(fields: [orderId], references: [id])
-  orderId      String
+  orderId      String  @db.Uuid
   plan         PricingPlan @relation(fields: [planId], references: [id])
-  planId       String
+  planId       String  @db.Uuid
   configuration Json
-  unitPrice    Decimal
+  unitPrice    Decimal @db.Decimal(10, 2)
   quantity     Int
+
+  @@map("order_items")
 }
 
 
@@ -226,7 +229,7 @@ model Subscription {
 model Cart {
   id        String    @id @default(dbgenerated("gen_random_uuid()"))
   user      User      @relation(fields: [userId], references: [id])
-  userId    String
+  userId    String    @unique @db.Uuid
   items     CartItem[]
   createdAt DateTime  @default(now())
   updatedAt DateTime  @default(now())
@@ -237,9 +240,10 @@ model CartItem {
   cart         Cart    @relation(fields: [cartId], references: [id])
   cartId       String
   plan         PricingPlan @relation(fields: [planId], references: [id])
-  planId       String
+  planId       String @db.Uuid
   configuration Json
   quantity     Int     @default(1)
+  unitPrice    Decimal @db.Decimal(10, 2)
   createdAt    DateTime @default(now())
   updatedAt    DateTime @default(now())
 }

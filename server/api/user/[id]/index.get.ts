@@ -15,18 +15,8 @@ export default defineEventHandler(async (event) => {
     where: { id: userId },
     select: {
       id: true,
-      firstName: true,
-      lastName: true,
       email: true,
-      phoneNumber: true,
-      streetAddress: true,
-      streetAddress2: true,
-      city: true,
-      state: true,
-      zipCode: true,
-      country: true,
-      companyName: true,
-      taxId: true
+      billingInfo: true,
     }
   })
 

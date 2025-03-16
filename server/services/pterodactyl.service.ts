@@ -1,5 +1,5 @@
 import { ofetch } from 'ofetch'
-import { servers, users } from '@prisma/client'
+import type { User, Service } from '@prisma/client'
 import { Allocation, NodeResource, NodeWithLocation, PterodactylServer, ServerCreateParams } from '~/types/pterodactyl'
 import { prisma } from '~/server/lib/prisma'
 
@@ -9,85 +9,69 @@ export class PterodactylService {
     apiKey: useRuntimeConfig().pterodactylApiKey
   }
 
-  async createServer(user: users, config: ServerCreateParams): Promise<servers> {
-    const user_uid = await prisma.users.findUnique({
-      where: { email: user.email }
-    })
-    if (!user_uid) throw new Error('User not found')
+  async createServer(user: User, config: ServerCreateParams): Promise<Service> {
     const pterodactylUserId = await this.findOrCreateUser(user)
     // console.log('[Pterodactyl] User ID:', pterodactylUserId)
     const serverDetails = await this.createPterodactylServer(pterodactylUserId, config)
     // console.log('[Pterodactyl] Nuxt User ID:', user_uid)
     
-    return prisma.servers.create({
+    return prisma.service.create({
       data: {
-        user_id: user_uid.id,
-        pterodactyl_server_id: serverDetails.id.toString(),
-        // identifier: serverDetails.identifier,
+        type: 'GAME_SERVER',
+        userId: user.id,
         config: {
           memory: config.memory,
           cpu: config.cpu,
-          disk: config.disk
+          disk: config.disk,
+          pterodactylServerId: serverDetails.id.toString(),
+          gameType: 'minecraft'
         },
-        status: 'installing',
-        game_type: 'minecraft'
-        // game_type: config.game_type // Add the missing game_type property
-      }
-    })
+        networkConfig: {
+          create: {
+            ipv4: serverDetails.allocation.ip,
+            ports: { tcp: [serverDetails.allocation.port] }
+          }
+        }
+      },
+      include: { networkConfig: true }
+    });
   }
 
-//   private 
-  async findOrCreateUser(user: users): Promise<string> {
+  private async findOrCreateUser(user: User): Promise<string> {
     try {
       const response = await ofetch(`${this.config.host}/api/application/users?filter[email]=${user.email}`, {
         headers: this.getHeaders()
-      })
-
-      console.debug('[Pterodactyl] User search response:', response)
+      });
 
       if (response.data.length > 0) {
-        // console.log(`[Pterodactyl] Existing user found: ${response.data[0].attributes.id}`)
-        return response.data[0].attributes.id
+        return response.data[0].attributes.id;
       }
-    //   if (response.data.length > 0) return response.data[0].attributes.id
 
-    //   console.log('[Pterodactyl] Creating new user for:', user.email)
       const newUser = await ofetch(`${this.config.host}/api/application/users`, {
         method: 'POST',
         headers: this.getHeaders(),
         body: {
           email: user.email,
           username: this.generateUsername(user.email),
-          first_name: user.first_name,
-          last_name: user.last_name,
-          // password: this.generatePassword() Disable password generation for now
-        },
-        parseResponse: JSON.parse
-      })
-
-      // Directly access attributes from root object
-        if (!(newUser as any)?.attributes) {
-            throw new Error('Invalid egg data response structure');
+          first_name: user.firstName || '',
+          last_name: user.lastName || '',
         }
+      });
 
-    //   console.log('[Pterodactyl] User creation response:', newUser)
+      await prisma.user.update({
+        where: { id: user.id },
+        data: { 
+          config: {
+            ...(user.config as object || {}),
+            pterodactylUserId: newUser.attributes.id
+          }
+        }
+      });
 
-      prisma.users.update({
-        where: { email: user.email },
-        data: { pterodactyl_user_id: newUser.attributes.id }
-        })
-      return newUser.attributes.id
+      return newUser.attributes.id;
     } catch (error) {
-      if (error instanceof Error) {
-        console.error('[Pterodactyl] User creation failed:', {
-            error: (error as any).data?.errors || (error as any).message,
-            config: this.config,
-            user
-        })
-        throw new Error(`Pterodactyl user creation failed: ${(error as any).data?.errors?.[0]?.detail || error.message}`)
-      } else {
-        throw new Error('Pterodactyl user creation failed: Unknown error')
-      }
+      console.error('Pterodactyl user creation failed:', error);
+      throw new Error('Failed to create Pterodactyl user');
     }
   }
 

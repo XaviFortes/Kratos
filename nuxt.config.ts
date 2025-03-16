@@ -13,6 +13,9 @@ export default defineNuxtConfig({
     // Auth pages
     // '/auth/**': { ssr: false },
 
+    // Admin pages
+    '/admin/**': { ssr: false },
+
     // '/dashboard': { ssr: false },
     '/dashboard/**': {
       ssr: false,

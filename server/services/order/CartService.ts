@@ -14,8 +14,11 @@ export class CartService {
       // Validate pricing plan
       const plan = await tx.pricingPlan.findUnique({
         where: { id: params.planId },
-        rejectOnNotFound: true
       });
+  
+      if (!plan) {
+        throw new Error("Pricing plan not found");
+      }
 
       // Create/update cart
       const cart = await tx.cart.upsert({
