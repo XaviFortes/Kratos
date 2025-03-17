@@ -30,7 +30,7 @@
       <div>
         <SubscriptionStatus />
         <InvoiceLinks />
-        <CheckoutButton :price-id="selectedPriceId" :config="serverConfig" />
+        <!-- <CheckoutButton :price-id="selectedPriceId" :config="serverConfig" /> -->
       </div>
 
       <!-- Server Grid -->
