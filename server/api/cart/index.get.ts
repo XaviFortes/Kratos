@@ -23,5 +23,18 @@ export default defineEventHandler(async (event) => {
       }
     })
   
-    return cart || { items: [], total: 0 }
+    if (!cart) {
+      return { items: [], total: 0 };
+      // throw createError({ statusCode: 404, message: 'Cart not found' });
+    }
+
+    return {
+      ...cart,
+      items: cart.items.map(item => ({
+        ...item,
+        unitPrice: item.unitPrice, // Use stored calculated price
+        total: Number(item.unitPrice) * item.quantity
+      })),
+      total: cart.items.reduce((sum, item) => sum + (Number(item.unitPrice) * item.quantity), 0)
+    };  
 })

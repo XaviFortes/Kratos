@@ -3,8 +3,10 @@ import { prisma } from "~/server/lib/prisma"
 
 // server/api/cart/items/[id].delete.ts
 export default defineEventHandler(async (event) => {
-    const user = event.context.user
-    if (!user) throw createError({ statusCode: 401 })
+    const session = await getServerSession(event as any)
+    if (!session) throw createError({ statusCode: 401 })
+
+    const user = session.user
   
     const { id } = event.context.params || {}
   

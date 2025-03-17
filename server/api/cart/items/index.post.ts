@@ -39,12 +39,15 @@ const itemSchema = z.object({
       Object.fromEntries(
         Object.entries(configTemplate).map(([key, spec]) => [
           key,
-          z.number().min(spec.min).max(spec.max)
+          spec === 'string' ? z.string() : z.any()
         ])
       )
     );
 
     const configResult = configSchema.safeParse(result.data.configuration);
+
+    console.info(configResult)
+
     if (!configResult.success) {
       throw createError({ statusCode: 400, message: 'Invalid configuration' });
     }

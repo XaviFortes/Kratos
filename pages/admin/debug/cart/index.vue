@@ -9,8 +9,13 @@
                 <input v-model="newItem.planId" placeholder="Plan ID" class="p-2 border rounded w-full">
                 <textarea v-model="newItem.config" placeholder="Configuration (JSON)"
                     class="p-2 border rounded w-full h-32"></textarea>
-                <input v-model.number="newItem.quantity" type="number" placeholder="Quantity"
-                    class="p-2 border rounded w-full">
+                <div class="grid grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-sm font-medium mb-1">Quantity</label>
+                        <input v-model.number="newItem.quantity" type="number" 
+                            class="p-2 border rounded w-full">
+                    </div>
+                </div>
                 <button @click="addItem" :disabled="addingItem"
                     class="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600 disabled:bg-gray-400">
                     {{ addingItem ? 'Adding...' : 'Add Item' }}
@@ -34,8 +39,16 @@
                             <div>
                                 <h3 class="font-semibold">{{ item.plan.name }}</h3>
                                 <p class="text-sm text-gray-600">Plan ID: {{ item.plan.id }}</p>
-                                <p class="mt-2">Quantity: {{ item.quantity }}</p>
-                                <pre class="text-sm bg-gray-50 p-2 rounded mt-2">{{ item.configuration }}</pre>
+                                <div class="mt-2 grid grid-cols-2 gap-4">
+                                    <div>
+                                        <p>Unit Price: {{ formatCurrency(item.unitPrice) }}</p>
+                                        <p>Quantity: {{ item.quantity }}</p>
+                                        <p class="font-semibold">Total: {{ formatCurrency(item.unitPrice * item.quantity) }}</p>
+                                    </div>
+                                    <div>
+                                        <pre class="text-sm bg-gray-50 p-2 rounded">{{ item.configuration }}</pre>
+                                    </div>
+                                </div>
                             </div>
                             <div class="flex gap-2">
                                 <button @click="openUpdateModal(item)" class="text-blue-500 hover:text-blue-700">
@@ -46,6 +59,11 @@
                                 </button>
                             </div>
                         </div>
+                    </div>
+                    <div class="mt-4 pt-4 border-t">
+                        <h3 class="text-xl font-semibold text-right">
+                            Cart Total: {{ formatCurrency(cart.total) }}
+                        </h3>
                     </div>
                 </div>
             </div>
@@ -110,12 +128,28 @@ const selectedItem = ref(null)
 const updateQuantity = ref(1)
 
 // Sample data for testing
-const samplePlanId = 'your-sample-plan-id-here' // Replace with actual ID from your DB
+const samplePlanId = '440b2c10-2001-465f-816e-7d504ea8cbde' // Replace with actual ID from your DB
 
+// Add currency formatter
+const formatCurrency = (amount) => {
+    return new Intl.NumberFormat('en-US', {
+        style: 'currency',
+        currency: 'USD',
+        minimumFractionDigits: 2,
+        maximumFractionDigits: 2
+    }).format(amount)
+}
+
+// Update sample data to include pricing-related fields
 const fillSampleData = () => {
     newItem.value = {
         planId: samplePlanId,
-        config: JSON.stringify({ os: 'ubuntu', cpu: 4 }, null, 2),
+        config: JSON.stringify({ 
+            ramGB: 8, 
+            cpu: 4,
+            backupEnabled: true,
+            storageGB: 256
+        }, null, 2),
         quantity: 1
     }
 }

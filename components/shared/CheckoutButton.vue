@@ -17,10 +17,10 @@
 </template>
 
 <script setup>
-import { useElements, useStripe } from '@stripe/stripe-js'
+// import { useStripe } from '@stripe/stripe-js'
 
-const stripe = await useStripe()
-const elements = useElements()
+// const stripe = await useStripe()
+// const elements = useElements()
 const cardElementRef = ref(null)
 let cardElement = null
 

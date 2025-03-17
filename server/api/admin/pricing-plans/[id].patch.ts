@@ -5,7 +5,7 @@ import { getServerSession } from "#auth";
 const planSchema = z.object({
     priceMonthly: z.number().positive().optional(),
     pricingModel: z.object({
-        basePrice: z.number().positive(),
+        basePrice: z.number().positive().optional(),
         modifiers: z.array(
             z.object({
                 field: z.string(),
