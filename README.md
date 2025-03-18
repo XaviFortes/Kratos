@@ -1,3 +1,6 @@
+# WORK IN PROGRESS
+![Alt](https://repobeats.axiom.co/api/embed/c04a4a2e489e7db7a22953072bd1d59bd58c9d5b.svg "Repobeats analytics image")
+
 # Nuxt Minimal Starter
 
 Look at the [Nuxt documentation](https://nuxt.com/docs/getting-started/introduction) to learn more.
