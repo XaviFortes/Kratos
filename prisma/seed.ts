@@ -25,10 +25,16 @@ async function seed() {
       data: {
         hostname: 'game-nyc-01',
         dataCenterId: usWest.id,
+        type: 'GAME_SERVER',
         spec: {
-          cpu: 128,
-          ramGB: 512,
-          storageTB: 100
+          cpu: 12,
+          ram: 32,
+          storage: 400
+        },
+        allocated: {
+          cpu: 32,
+          ram: 128,
+          storage: 200
         },
         status: 'AVAILABLE'
       }
@@ -37,10 +43,16 @@ async function seed() {
       data: {
         hostname: 'vps-lon-01',
         dataCenterId: euCentral.id,
+        type: 'VPS',
         spec: {
           cpu: 64,
-          ramGB: 256,
-          storageTB: 50
+          ram: 256,
+          storage: 50
+        },
+        allocated: {
+          cpu: 16,
+          ram: 64,
+          storage: 10
         },
         status: 'AVAILABLE'
       }
@@ -49,10 +61,16 @@ async function seed() {
       data: {
         hostname: 'dedicated-01',
         dataCenterId: usWest.id,
+        type: 'DEDICATED_SERVER',
         spec: {
           cpu: 256,
-          ramGB: 1024,
-          storageTB: 500
+          ram: 1024,
+          storage: 5000
+        },
+        allocated: {
+          cpu: 64,
+          ram: 256,
+          storage: 1000
         },
         status: 'AVAILABLE'
       }

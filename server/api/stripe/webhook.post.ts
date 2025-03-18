@@ -15,8 +15,7 @@ export default defineEventHandler(async (event) => {
         body,
         stripeSignature,
         process.env.STRIPE_WEBHOOK_SECRET!
-      );
-  
+      );  
       return paymentService.handleWebhook(stripeEvent);
     } catch (err) {
       console.error('Stripe webhook error:', err);

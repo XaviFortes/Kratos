@@ -21,13 +21,14 @@ export default NuxtAuthHandler({
     adapter: PrismaAdapter(prisma) as any,
     providers: [
         // @ts-expect-error Use .default here for it to work during SSR.
-        DiscordProvider.default({
-            clientId: process.env.DISCORD_ID!, // Your Discord application ID
-            clientSecret: process.env.DISCORD_SECRET! // Your Discord application secret
-        }),
         GithubProvider.default({
           clientId: process.env.GH_ID!,
           clientSecret: process.env.GH_SECRET!
+        }),
+        DiscordProvider.default
+        ({
+            clientId: process.env.DISCORD_ID!, // Your Discord application ID
+            clientSecret: process.env.DISCORD_SECRET! // Your Discord application secret
         }),
         /*
         CredentialsProvider({

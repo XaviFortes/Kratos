@@ -80,7 +80,7 @@
                 <h3 class="font-semibold mb-2">Checkout Result:</h3>
                 <pre>{{ checkoutResult }}</pre>
                 <div v-if="checkoutResult.stripeSessionId" class="mt-4">
-                    <a :href="checkoutResult.stripeSessionUrl" target="_blank" class="text-blue-500 hover:underline">
+                    <a :href="checkoutResult.url" target="_blank" class="text-blue-500 hover:underline">
                         Proceed to Stripe Checkout
                     </a>
                 </div>
@@ -145,10 +145,11 @@ const fillSampleData = () => {
     newItem.value = {
         planId: samplePlanId,
         config: JSON.stringify({ 
-            ramGB: 8, 
+            ram: 8, 
             cpu: 4,
             backupEnabled: true,
-            storageGB: 256
+            disk: 1,
+            location: 'eu'
         }, null, 2),
         quantity: 1
     }

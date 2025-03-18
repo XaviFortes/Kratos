@@ -74,15 +74,18 @@
             </div>
   
             <!-- Order Actions -->
-            <div class="mt-6 flex justify-between items-center">
-              <div class="text-sm text-gray-400">
-                Created: {{ formatDate(order.createdAt) }}
+             <NuxtLink :to="`/dashboard/orders/${order.id}`">
+             
+              <div class="mt-6 flex justify-between items-center">
+                <div class="text-sm text-gray-400">
+                  Created: {{ formatDate(order.createdAt) }}
+                </div>
+                <button class="text-blue-400 hover:text-blue-300 flex items-center gap-1">
+                  <Icon name="heroicons:arrow-top-right-on-square-20-solid" class="w-4 h-4" />
+                  Manage
+                </button>
               </div>
-              <button class="text-blue-400 hover:text-blue-300 flex items-center gap-1">
-                <Icon name="heroicons:arrow-top-right-on-square-20-solid" class="w-4 h-4" />
-                Manage
-              </button>
-            </div>
+            </NuxtLink>
           </div>
         </div>
   
@@ -133,6 +136,7 @@
     return {
       ACTIVE: 'bg-green-400',
       PENDING: 'bg-yellow-400',
+      UNPAID: 'bg-purple-400',
       SUSPENDED: 'bg-red-400',
       CANCELLED: 'bg-gray-400'
     }[status]
@@ -142,6 +146,7 @@
     return {
       ACTIVE: 'bg-green-400/20 text-green-400',
       PENDING: 'bg-yellow-400/20 text-yellow-400',
+      UNPAID: 'bg-purple-400/20 text-purple-400',
       SUSPENDED: 'bg-red-400/20 text-red-400',
       CANCELLED: 'bg-gray-400/20 text-gray-400'
     }[status]

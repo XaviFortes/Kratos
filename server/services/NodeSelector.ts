@@ -16,7 +16,7 @@ export class NodeSelector {
         status: 'AVAILABLE',
         spec: {
           path: ['cpu'],
-          gte: requirements.cpu
+          gte: requirements.cpu / 100
         }
       },
       include: { dataCenter: true }

@@ -24,6 +24,7 @@ enum ResourceStatus {
 }
 
 enum OrderStatus {
+  UNPAID
   PENDING
   ACTIVE
   SUSPENDED
@@ -76,7 +77,9 @@ model Host {
   id           String         @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   hostname     String         @unique
   dataCenterId String         @map("data_center_id") @db.Uuid
+  type         ServiceType
   spec         Json // { cpu: 128, ramGB: 512, storageTB: 100 }
+  allocated    Json // { cpu: 32, ramGB: 128, storageTB: 50 }
   status       ResourceStatus @default(AVAILABLE)
   createdAt    DateTime       @default(now()) @map("created_at")
 

@@ -25,15 +25,20 @@ export class ProvisioningService {
   }) {
     // 1. Validate resources
     const resourceRequirements = {
-      memory: params.configuration.memory,
-      disk: params.configuration.disk,
-      location: params.configuration.location
+      cpu: params.configuration.cpu * 100, // Add appropriate value for cpu
+      memory: params.configuration.ram * 1024,
+      disk: params.configuration.disk * 1024,
+      location: params.configuration.location || 'eu'
     };
+
+    console.log('Resource requirements:', resourceRequirements);
 
     // 2. Find suitable host
     const host = await this.nodeSelector.findOptimalHost(resourceRequirements);
     
     if (!host) {
+      // Notify admins
+      console.error('No available hosts matching requirements');
       throw new Error('No available hosts matching requirements');
     }
 
@@ -56,7 +61,7 @@ export class ProvisioningService {
       where: { id: host.id },
       data: { 
         status: 'ALLOCATED',
-        allocatedAt: new Date()
+        createdAt: new Date(),
       }
     });
 

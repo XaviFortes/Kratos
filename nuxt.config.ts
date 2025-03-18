@@ -48,7 +48,6 @@ export default defineNuxtConfig({
     provider: {
       type: 'authjs',
       trustHost: false,
-      defaultProvider: 'discord',
       addDefaultCallbackUrl: true
     },
     sessionRefresh: {

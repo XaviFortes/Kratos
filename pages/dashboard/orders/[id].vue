@@ -109,8 +109,8 @@
               </div>
               <div class="bg-gray-900/50 p-4 rounded-lg flex items-center gap-4">
                 <Icon name="heroicons:credit-card" class="text-2xl text-gray-400" />
-                <span class="font-mono text-lg text-gray-100">**** **** **** 1234{{ order.paymentMethod }}</span>
-                <span class="text-sm text-gray-400">Exp 01/26{{ order.paymentMethod }}</span>
+                <span class="font-mono text-lg text-gray-100">**** **** **** {{ order.paymentMethod?.card?.last4 }}</span>
+                <span class="text-sm text-gray-400">Exp {{ order.paymentMethod?.card?.exp_month }}/{{ order.paymentMethod?.card?.exp_year }}</span>
               </div>
             </div>
 
@@ -131,7 +131,7 @@
                     <div class="text-sm">{{ formatCurrency(invoice.amount) }}</div>
                     <div class="text-xs text-gray-400">{{ invoice.period }}</div>
                   </div>
-                  <button v-if="invoice.status === 'UNPAID'"
+                  <button v-if="order.status === 'UNPAID'"
                           class="pay-btn"
                           @click="payInvoice(invoice)">
                     Pay Now
@@ -238,6 +238,7 @@ const statusBadge = (status) => {
   return {
     ACTIVE: 'bg-green-400/20 text-green-400',
     PENDING: 'bg-blue-400/20 text-blue-400',
+    UNPAID: 'bg-red-400/20 text-red-400',
     PAST_DUE: 'bg-red-400/20 text-red-400',
     PAUSED: 'bg-yellow-400/20 text-yellow-400',
     CANCELLED: 'bg-gray-400/20 text-gray-400'

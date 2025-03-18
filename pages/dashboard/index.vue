@@ -29,7 +29,7 @@
 
       <div>
         <SubscriptionStatus />
-        <InvoiceLinks />
+        <!-- <InvoiceLinks /> -->
         <!-- <CheckoutButton :price-id="selectedPriceId" :config="serverConfig" /> -->
       </div>
 
@@ -70,6 +70,17 @@
           </div>
         </div>
       </div>
+
+      <!-- Create an orders redirect with the same style as others -->
+      <NuxtLink to="/dashboard/orders">
+        <div class="bg-gray-800/40 p-6 rounded-xl border border-gray-700/50 animate-fade-in-up">
+          <div class="text-3xl font-bold text-blue-400 mb-2">Orders</div>
+            <div class="text-gray-400">Manage your active orders</div>
+            <div class="text-blue-400 hover:text-blue-300 transition-colors flex items-center justify-end">
+              View <span class="ml-2">→</span>
+            </div>
+        </div>
+      </NuxtLink>
 
       <!-- Create Server Button -->
       <div class="mt-12 text-center animate-fade-in-up delay-300">

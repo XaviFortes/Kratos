@@ -1,6 +1,7 @@
 // server/services/order/PaymentService.ts
 import Stripe from 'stripe'
 import { prisma } from "~/server/lib/prisma"
+import { ProvisioningService } from '../core/ProvisioningService';
 
 export class PaymentService {
   public stripe: Stripe; // Changed to public
@@ -24,7 +25,7 @@ export class PaymentService {
         price_data: {
           currency: 'eur',
           product_data: { name: `Hosting Order #${order.id}` },
-          unit_amount: Math.round(order.totalAmount * 100)
+          unit_amount: Math.round(Number(order.totalAmount) * 100)
         },
         quantity: 1
       }],
@@ -44,17 +45,24 @@ export class PaymentService {
 
   async handleWebhook(event: Stripe.Event) {
     if (event.type === 'checkout.session.completed') {
+      console.log('Checkout session completed:', event.data.object);
       const session = event.data.object as Stripe.Checkout.Session;
-      await this.fulfillOrder(session.metadata.orderId);
+      console.log('Session metadata:', session.client_reference_id);
+      if (session.client_reference_id) {
+        await this.fulfillOrder(session.client_reference_id);
+      } else {
+        throw new Error('Client reference ID is null');
+      }
+      console.log('Order fulfilled:', session.client_reference_id);
     }
   }
 
   private async fulfillOrder(orderId: string) {
     return prisma.$transaction(async (tx) => {
       const order = await tx.order.update({
-        where: { id: orderId, status: 'DRAFT' },
-        data: { status: 'PAID' },
-        include: { items: true }
+        where: { id: orderId, status: 'UNPAID' },
+        data: { status: 'PENDING' },
+        include: { items: { include: { plan: true } } }
       });
 
       // Create invoices
@@ -66,7 +74,7 @@ export class PaymentService {
           paidAt: new Date(),
           periodStart: new Date(),
           periodEnd: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000), // 30 days
-          order: { connect: { id: orderId } }
+          orderId: orderId
         }
       });
 
