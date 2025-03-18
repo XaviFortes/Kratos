@@ -96,4 +96,10 @@ export class ProvisioningService {
       ports: { tcp: [25565] }
     };
   }
+
+  private async allocateIPv4Address(): Promise<string> {
+    // Implementation for allocating an IPv4 address
+    // This is a placeholder implementation
+    return '192.168.1.1';
+  }
 }
