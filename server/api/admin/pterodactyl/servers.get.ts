@@ -1,4 +1,4 @@
-import prisma from "~/server/lib/prisma";
+import { prisma } from "~/server/lib/prisma";
 import { requireAdminUser } from "~/server/utils/adminAuth";
 
 // server/api/admin/pterodactyl/servers.get.ts
