@@ -47,18 +47,18 @@ export class ProvisioningService {
       data: {
         type: params.serviceType,
         userId: params.userId,
-        hostId: host.id,
+        hostId: host,
         config: this.buildServiceConfig(params),
-        networkConfig: {
-          create: await this.generateNetworkConfig()
-        }
+        // network: {
+        //   create: await this.generateNetworkConfig()
+        // }
       },
-      include: { networkConfig: true }
+      // include: { networkConfig: true }
     });
 
     // 4. Update host status
     await prisma.host.update({
-      where: { id: host.id },
+      where: { id: host },
       data: { 
         status: 'ALLOCATED',
         createdAt: new Date(),

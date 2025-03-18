@@ -127,6 +127,23 @@ async function seed() {
           minCpu: 2,
           maxCpu: 8,
           baseStorage: 100
+        },
+        pricingModel: {
+          "basePrice": 0,
+          "modifiers": [
+            {
+              "type": "per_unit",
+              "unit": "gb",
+              "field": "ram",
+              "price": 2
+            },
+            {
+              "type": "per_unit",
+              "unit": "cores",
+              "field": "cpu",
+              "price": 2
+            }
+          ]
         }
       }
     }),

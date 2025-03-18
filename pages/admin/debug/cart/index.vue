@@ -128,7 +128,7 @@ const selectedItem = ref(null)
 const updateQuantity = ref(1)
 
 // Sample data for testing
-const samplePlanId = '440b2c10-2001-465f-816e-7d504ea8cbde' // Replace with actual ID from your DB
+const samplePlanId = '017290e0-4adf-45a3-988e-c9e46aab7ad6' // Replace with actual ID from your DB
 
 // Add currency formatter
 const formatCurrency = (amount) => {
@@ -149,7 +149,7 @@ const fillSampleData = () => {
             cpu: 4,
             backupEnabled: true,
             disk: 1,
-            location: 'eu'
+            location: 'EU Central'
         }, null, 2),
         quantity: 1
     }
