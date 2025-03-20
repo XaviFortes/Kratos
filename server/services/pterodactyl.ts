@@ -58,7 +58,7 @@ export class PterodactylService {
         external_id?: string;
         description?: string;
     }) {
-        return $fetch(`${process.env.PTERODACTYL_URL}/api/application/servers/${id}/details`, {
+        const res = $fetch(`${process.env.PTERODACTYL_URL}/api/application/servers/${id}/details`, {
             method: 'PATCH',
             headers: this.headers,
             body: {
@@ -68,6 +68,8 @@ export class PterodactylService {
                 description: data.description
             }
         })
+        // console.log('Updated server details:');
+        return res;
     }
 
     /**
@@ -145,6 +147,7 @@ export class PterodactylService {
 
         // Update details if relevant fields are present
         if (data.name || data.userId || data.external_id || data.description) {
+            console.log('Updating server details:', data);
             results.details = await this.updateServerDetails(id, {
                 name: data.name,
                 user: data.userId,
@@ -218,7 +221,7 @@ export class PterodactylService {
             // Format to match Pterodactyl structure
             return {
                 object: "list",
-                data: localUsers.map(user => ({
+                data: localUsers.map((user: { id: any; email: string; name: any; firstName: any; lastName: any; image: any; }) => ({
                     object: "user",
                     attributes: {
                         id: user.id,
