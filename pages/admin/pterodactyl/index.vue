@@ -90,7 +90,10 @@
               </div>
               <div>
                 <label class="block text-sm font-medium mb-1">Egg</label>
-                <select v-model="form.eggId" required class="p-2 border rounded w-full">
+                <select v-model="form.eggId" required class="p-2 border rounded w-full" :disabled="!form.nestId || eggs.length === 0">
+                  <option v-if="!form.nestId" value="" disabled>Select a nest first</option>
+                  <option v-else-if="eggs.length === 0" value="" disabled>Loading eggs...</option>
+                  <option v-else value="">Select an Egg</option>
                   <option v-for="egg in eggs" :key="egg.id" :value="egg.id">
                     {{ egg.name }} ({{ egg.docker_image }})
                   </option>
@@ -128,7 +131,7 @@
                     v-model.number="form.limits.cpu" 
                     required 
                     min="0"
-                    max="100" 
+                    max="6400" 
                     class="p-2 border rounded w-full"
                   >
                 </div>
@@ -150,8 +153,8 @@
                 <!-- In your template in the user dropdown -->
                 <select v-model="form.userId" required class="p-2 border rounded flex-grow">
                     <option value="">Select Owner</option>
-                    <option v-for="user in users" :key="user.attributes.id" :value="user.attributes.id">
-                    {{ user.attributes.name || user.attributes.email }}
+                    <option v-for="user in users" :key="user.id" :value="user.id">
+                    {{ user.name }} ({{ user.email }})
                     </option>
                 </select>
                 <button 
@@ -213,6 +216,7 @@
   const servers = ref([])
   const nests = ref([])
   const eggs = ref([])
+  const users = ref([])
   const loading = ref(true)
   const showModal = ref(false)
   const isEditing = ref(false)
@@ -251,9 +255,11 @@
     const fetchUsers = async () => {
       try {
         const response = await $fetch('/api/admin/users')
-        users.value = response.data // This now contains the properly formatted user data
+        users.value = response.data.map((user) => user.attributes)
+        console.log(users.value)
       } catch (error) {
         $toast.error('Failed to load users')
+        console.error(error)
       }
     }
 
@@ -276,7 +282,6 @@
   
   const openCreateModal = async () => {
     await fetchNests()
-    await fetchEggs()
     await fetchUsers()
     form.value = {
         name: '',
@@ -297,7 +302,6 @@
   
   const openEditModal = async (server) => {
     await fetchNests()
-    await fetchEggs()
     await fetchUsers()
     // Ensure limits exist in the form
     const limits = server.limits || {
@@ -307,6 +311,12 @@
       io: 500
     }
     form.value = { ...server }
+
+    // Fetch eggs for the selected nest
+    if (form.value.nestId) {
+      await fetchEggs(form.value.nestId)
+    }
+
     isEditing.value = true
     showModal.value = true
   }
@@ -321,9 +331,9 @@
         const url = isEditing.value 
           ? `/api/admin/pterodactyl-servers/${form.value.id}`
           : '/api/admin/pterodactyl-servers'
-        
+
         const method = isEditing.value ? 'PUT' : 'POST'
-        
+
         // Make sure limits are properly formatted
         const requestData = {
           ...form.value,
@@ -334,12 +344,12 @@
           io: parseInt(form.value.limits.io)
           }
         }
-    
+
         await $fetch(url, {
           method,
           body: requestData // Use requestData instead of form.value
         })
-    
+
         $toast.success(`Server ${isEditing.value ? 'updated' : 'created'} successfully`)
         await fetchServers()
         closeModal()
@@ -396,17 +406,44 @@
       nests.value = response.data.map((nest) => nest.attributes)
     } catch (error) {
       $toast.error(`Failed to load nests error ${error}`)
+      console.error(error)
     }
   }
   
-  const fetchEggs = async () => {
-    try {
-      const response = await $fetch('/api/admin/pterodactyl-servers/eggs')
-      eggs.value = response.data.map((egg) => egg.attributes)
-    } catch (error) {
-      $toast.error('Failed to load eggs')
+    // Fix the fetchEggs function to accept the nestId parameter
+    const fetchEggs = async (nestId) => {
+      try {
+        eggs.value = [] // Clear eggs while loading
+        if (!nestId) {
+          return // Don't fetch if no nest selected
+        }
+
+        const response = await $fetch(`/api/admin/pterodactyl-servers/eggs?nestId=${nestId}`)
+        // Transform the nested structure if necessary
+        eggs.value = response.data.map(egg => ({
+          id: egg.attributes.id,
+          name: egg.attributes.name,
+          docker_image: egg.attributes.docker_image,
+          // Include other needed properties
+        }))
+      } catch (error) {
+        $toast.error('Failed to load eggs')
+        console.error(error)
+      }
     }
-  }
+
+    // Watch for changes to the selected nest
+    watch(() => form.value.nestId, async (newNestId) => {
+      // When nest changes, reset egg selection
+      form.value.eggId = ''
+    
+      // Fetch eggs for the selected nest
+      if (newNestId) {
+        await fetchEggs(newNestId)
+      } else {
+        eggs.value = [] // Clear eggs if no nest selected
+      }
+    })
   
   onMounted(() => {
     fetchServers()
