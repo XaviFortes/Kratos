@@ -82,6 +82,12 @@ To preview the production build:
 pnpm preview
 ```
 
+To start the production server:
+```bash
+node .output/server/index.mjs
+```
+You might need to set the env vars on the production server using `export` or a process manager like PM2.
+
 ## 📖 Documentation
 
 For detailed documentation, please visit our [Wiki](https://github.com/KratosHost/Kratos/wiki).
@@ -100,4 +106,24 @@ Built with ❤️ by the Kratos team.
 
 ## 📧 Contact
 
-For support or inquiries, please [open an issue](https://github.com/KratosHost/Kratos/issues) or contact our support team at support-gh@kratoshost.com.
+For support or inquiries, please [open an issue](https://github.com/KratosHost/Kratos/issues) or contact our support team at github@kratoshost.com.
+
+## 🚀 Roadmap
+
+- [ ] Multi-region support
+- [ ] Game server logs and console access
+- [ ] Custom game server images
+- [ ] Game server mod support
+
+## 🌟 Sponsors
+
+Support this project by becoming a sponsor. Your logo will show up here with a link to your website. [Become a sponsor](https://github.com/sponsors/XaviFortes)
+
+
+## 🚀 Issues deploying?
+
+### 1. Prisma Client error?
+If you're getting an error related to Prisma Client, try running the following command:
+```bash
+npx prisma generate
+```
