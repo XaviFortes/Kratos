@@ -1,10 +1,13 @@
 // plugins/pterodactyl.client.ts
 import ptero from "pterodactyl-api-wrapper";
 
-export default defineNuxtPlugin(() => {
-  if (process.env.PTERODACTYL_URL) {
-    ptero.Setup.setPanel(process.env.PTERODACTYL_URL);
+export default defineNuxtPlugin((nuxtApp) => {
+  console.log("process.env", process.env.NUXT_PUBLIC_PTERODACTYL_URL);
+  const config = useRuntimeConfig()
+
+  if (config.public.pterodactylUrl) {
+    ptero.Setup.setPanel(config.public.pterodactylUrl);
   } else {
-    throw new Error("PTERODACTYL_URL is not defined");
+    throw new Error("pterodactylUrl is not defined");
   }
 });

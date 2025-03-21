@@ -1,14 +1,16 @@
-version: '3.8'
-
 services:
   app:
-    build: .
+    build:
+      context: .
+      args:
+        - DATABASE_URL=${DATABASE_URL}
     ports:
       - "3000:3000"
+    env_file: ".env"
     environment:
       - NODE_ENV=production
       - DATABASE_URL=${DATABASE_URL}
-      - FRONTEND_URL=http://localhost:3000
+      - FRONTEND_URL=${FRONTEND_URL:-http://localhost:3000}
       - PTERODACTYL_URL=${PTERODACTYL_URL}
       - PTERODACTYL_API_KEY=${PTERODACTYL_API_KEY}
       - JWT_SECRET=${JWT_SECRET}
