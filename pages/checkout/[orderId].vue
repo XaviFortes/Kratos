@@ -73,7 +73,7 @@
   
   <script setup>
   const route = useRoute()
-  // const { $stripe } = useNuxtApp()
+  const { $stripe } = useNuxtApp()
   
   const stripe = ref(null)
   const elements = ref(null)
@@ -90,10 +90,11 @@
   onMounted(async () => {
     stripe.value = await $stripe()
     elements.value = stripe.value.elements({
-      mode: 'payment',
+      mode: 'subscription',
       amount: order.value.totalAmount * 100,
-      currency: 'usd',
-      paymentMethodCreation: 'manual'
+      currency: 'eur',
+      setupFutureUsage: 'on_session',
+      // paymentMethodCreation: 'manual'
     })
   
     const paymentElement = elements.value.create('payment')

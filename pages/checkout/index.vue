@@ -140,19 +140,22 @@ const initializeStripe = async () => {
   try {
     paymentLoading.value = true;
     
-    // Create checkout session
+    // Create checkout session - update API to create a subscription setup
     const { sessionId, clientSecret } = await $fetch('/api/checkout/create-session', {
-      method: 'POST'
+      method: 'POST',
+      body: {
+        mode: 'subscription'  // Indicate we want subscription mode
+      }
     });
     
     if (!sessionId || !clientSecret) {
       throw new Error('Failed to initialize payment');
     }
     
-    // Load Stripe - now using the plugin
+    // Load Stripe
     stripe = await $stripe();
     
-    // Rest of your function remains the same
+    // Configure Stripe Elements with support for multiple payment methods
     elements = stripe.elements({
       clientSecret,
       appearance: {
@@ -162,16 +165,24 @@ const initializeStripe = async () => {
           colorBackground: '#2b3544',
         },
       },
+      loader: 'auto'
     });
     
-    // First set paymentLoading to false so the element appears in the DOM
     paymentLoading.value = false;
-    
-    // Use nextTick to ensure the DOM has updated
     await nextTick();
     
-    // Now mount the payment element to the ref
-    const paymentElement = elements.create('payment');
+    // Create payment element with enhanced options
+    const paymentElement = elements.create('payment', {
+      fields: {
+        billingDetails: 'auto'
+      },
+      wallets: {
+        applePay: 'auto',
+        googlePay: 'auto'
+      },
+      paymentMethodOrder: ['card', 'sepa_debit', 'ideal', 'sofort', 'bancontact', 'giropay', 'paypal']
+    });
+    
     paymentElement.mount(paymentElementRef.value);
     
   } catch (error) {
@@ -192,26 +203,96 @@ const processPayment = async () => {
     isProcessing.value = true;
     paymentError.value = '';
     
-    // Create checkout order and get order ID
-    const { orderId } = await $fetch('/api/checkout/create-order', {
-      method: 'POST'
-    });
+    // Step 1: Create order
+    $toast.info('Creating your order...');
+    let orderId;
+    try {
+      const response = await $fetch('/api/checkout/create-order', { method: 'POST' });
+      orderId = response.orderId;
+      
+      if (!orderId) {
+        throw new Error('Failed to create order');
+      }
+      
+      console.log('Order created:', orderId);
+    } catch (error) {
+      console.error('Order creation failed:', error);
+      throw new Error(`Order creation failed: ${error.message || 'Unknown error'}`);
+    }
     
-    const { error } = await stripe.confirmPayment({
+    // Step 2: Setup payment method
+    $toast.info('Setting up payment method...');
+    const { error, setupIntent } = await stripe.confirmSetup({
       elements,
       confirmParams: {
-        return_url: `${window.location.origin}/dashboard/orders/${orderId}?success=true`,
+        // Don't set return_url to avoid early redirect
+        payment_method_data: {
+          billing_details: {
+            name: '', 
+            email: ''
+          }
+        }
       },
+      redirect: 'if_required',
     });
     
     if (error) {
-      throw new Error(error.message || 'Payment failed');
+      console.error('Setup error:', error);
+      throw new Error(error.message || 'Payment setup failed');
     }
+
+    console.log('Setup intent completed:', setupIntent);
     
-    // Payment successful - should redirect by confirmPayment
+    // Step 3: Finalize if immediate completion
+    if (setupIntent?.status === 'succeeded') {
+      $toast.info('Finalizing subscription...');
+      
+      try {
+        // Send the setup intent ID to backend and wait for response
+        const response = await $fetch(`/api/checkout/finalize-subscription`, {
+          method: 'POST',
+          body: {
+            setupIntentId: setupIntent.id,
+            orderId: orderId
+          }
+        });
+        
+        // Add logs to help with debugging
+        console.log('Finalization response:', response);
+        
+        // Check if we got a subscription ID back (indicates success)
+        if (response && response.subscriptionId) {
+          $toast.success('Subscription created successfully!');
+          // Add a delay before redirecting to ensure database updates complete
+          setTimeout(() => {
+            router.push(`/dashboard/orders/${orderId}?success=true`);
+          }, 1000);
+        } else {
+          throw new Error('No subscription was created');
+        }
+      } catch (error) {
+        console.error('Subscription finalization error:', error);
+        let errorMessage = 'Failed to create subscription';
+        
+        // Show more specific error message if available
+        if (error.data && error.data.message) {
+          errorMessage += ': ' + error.data.message;
+        } else if (error.message) {
+          errorMessage += ': ' + error.message;
+        }
+        
+        paymentError.value = errorMessage;
+        $toast.error(errorMessage);
+        isProcessing.value = false;
+      }
+    } else {
+      // For 3DS or other auth flows that require redirect
+      $toast.info('Additional authentication required...');
+      // The user will be redirected by Stripe, so we don't need to do anything
+    }
   } catch (error) {
     console.error('Payment error:', error);
-    paymentError.value = error.message || 'Payment processing failed';
+    paymentError.value = error.message || 'Payment failed';
     $toast.error('Payment failed');
     isProcessing.value = false;
   }

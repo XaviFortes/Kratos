@@ -21,4 +21,4 @@ export default defineEventHandler(async (event) => {
       console.error('Stripe webhook error:', err);
       throw createError({ statusCode: 400, message: 'Webhook error' });
     }
-  });
+});

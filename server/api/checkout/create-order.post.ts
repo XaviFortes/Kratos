@@ -39,7 +39,7 @@ export default defineEventHandler(async (event) => {
     const order = await tx.order.create({
       data: {
         userId: user.id,
-        status: 'PENDING',
+        status: 'UNPAID',
         totalAmount: total,
         items: {
           create: cart.items.map(item => ({

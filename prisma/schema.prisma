@@ -226,6 +226,7 @@ model Invoice {
   periodStart           DateTime?     @map("period_start") @db.Timestamp(6)
   periodEnd             DateTime?     @map("period_end") @db.Timestamp(6)
   paidAt                DateTime?     @map("paid_at") @db.Timestamp(6)
+  stripeInvoiceId       String?       @unique @map("stripe_invoice_id")
   stripePaymentIntentId String?       @unique @map("stripe_payment_intent_id")
   createdAt             DateTime      @default(now()) @map("created_at")
   updatedAt             DateTime      @default(now()) @map("updated_at")
