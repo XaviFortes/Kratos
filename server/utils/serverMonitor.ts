@@ -2,6 +2,7 @@ import { prisma } from "~/server/lib/prisma"
 
 // server/utils/serverMonitor.ts
 export async function checkServerInstallation() {
+  const config = useRuntimeConfig()
     const installingServers = await prisma.servers.findMany({
       where: { status: 'installing' }
     })
@@ -11,7 +12,7 @@ export async function checkServerInstallation() {
         `${process.env.PTERODACTYL_URL}/api/application/servers/${server.pterodactyl_server_id}`,
         {
           headers: {
-            Authorization: `Bearer ${process.env.PTERODACTYL_API_KEY}`
+            Authorization: `Bearer ${config.pterodactylApiKey}`
           }
         }
       )

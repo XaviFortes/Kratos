@@ -10,6 +10,8 @@ export default defineEventHandler(async (event) => {
     node: parseInt(body.nodeId), // This should match the expected field name in your service
     userId: parseInt(body.userId), // This should match the expected field name in your service
     eggId: parseInt(body.eggId),
+    dockerImage: body.dockerImage,
+    startup: body.startup,
     description: body.description || '',
     limits: {
       memory: parseInt(body.limits?.memory) || 1024,

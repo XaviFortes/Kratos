@@ -37,7 +37,6 @@
     "nuxt": "^3.15.4",
     "pinia": "^3.0.1",
     "pinia-plugin-persistedstate": "^4.2.0",
-    "pterodactyl-api-wrapper": "^2.0.8",
     "sharp": "^0.33.5",
     "stripe": "^17.7.0",
     "vue": "latest",

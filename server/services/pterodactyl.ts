@@ -5,7 +5,7 @@ export class PterodactylService {
     private headers = {
         'Accept': 'application/json',
         'Content-Type': 'application/json',
-        'Authorization': `Bearer ${process.env.PTERODACTYL_API_KEY}`
+        'Authorization': `Bearer ${this.config.pterodactylApiKey}`
     }
 
     async getServers() {
@@ -28,8 +28,8 @@ export class PterodactylService {
                 node: data.nodeId,
                 user: data.userId,
                 egg: data.eggId,
-                docker_image: data.dockerImage || 'quay.io/pterodactyl/core:java',
-                startup: data.startup || 'java -Xms128M -Xmx{{SERVER_MEMORY}}M -jar {{SERVER_JARFILE}}',
+                docker_image: data.dockerImage,
+                startup: data.startup,
                 environment: data.environment || {
                     SERVER_JARFILE: 'server.jar',
                     VANILLA_VERSION: 'latest'

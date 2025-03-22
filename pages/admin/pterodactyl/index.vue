@@ -36,7 +36,7 @@
                   </div>
                 </td>
                 <td class="px-6 py-4 whitespace-nowrap">
-                  {{ server.user?.email || 'N/A' }}
+                  {{ server.user || 'N/A' }}
                 </td>
                 <td class="px-6 py-4 whitespace-nowrap">
                   <span :class="statusClasses(server.status)">
@@ -253,6 +253,11 @@
     }
   })
 
+  const closeModal = () => {
+    showModal.value = false
+    // Reset form if needed (already handled in openCreateModal for new entries)
+  }
+
   // Format MB to readable format
     const formatMB = (mb) => {
       if (!mb) return '0 MB'
@@ -359,6 +364,8 @@
             nodeId: form.value.nodeId,
             userId: form.value.userId,
             eggId: form.value.eggId,
+            dockerImage: eggs.value.find(egg => egg.id === form.value.eggId)?.docker_image,
+            startup: eggs.value.find(egg => egg.id === form.value.eggId)?.startup,
             description: form.value.description,
         
             // Properly format resource limits
@@ -483,6 +490,7 @@
         eggs.value = response.data.map(egg => ({
           id: egg.attributes.id,
           name: egg.attributes.name,
+          startup: egg.attributes.startup,
           docker_image: egg.attributes.docker_image,
           // Include other needed properties
         }))
