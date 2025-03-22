@@ -1,14 +1,16 @@
-import { loadStripe, type Stripe } from '@stripe/stripe-js'
+import { loadStripe } from '@stripe/stripe-js'
 
-let stripePromise: Promise<Stripe | null>
+let stripePromise: Promise<any> | null = null
+
 export default defineNuxtPlugin(() => {
   const config = useRuntimeConfig()
-  
+
   return {
     provide: {
       stripe: async () => {
         if (!stripePromise) {
-          stripePromise = loadStripe(process.env.STRIPE_PUBLISHABLE_KEY as string)
+          // Use the public runtime config instead of process.env
+          stripePromise = loadStripe(config.public.stripePublishableKey)
         }
         return stripePromise
       }

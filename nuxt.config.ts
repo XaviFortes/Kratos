@@ -69,8 +69,9 @@ export default defineNuxtConfig({
     pterodactylApiKey: process.env.NUXT_PTERODACTYL_API_KEY || '',
     public: {
       invoiceNinjaKey: process.env.NUXT_PUBLIC_INVOICE_NINJA_TOKEN,
-      pterodactylUrl: '',
+      pterodactylUrl: process.env.NUXT_PUBLIC_PTERODACTYL_URL || '',
       pterodactylClientApiKey: process.env.NUXT_PUBLIC_PTERODACTYL_API_KEY || '',
+      stripePublishableKey: process.env.STRIPE_PUBLISHABLE_KEY || ''
     }
   },
   css: [
