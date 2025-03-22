@@ -1,11 +1,15 @@
 // ~/server/services/stripeService.ts
 import Stripe from 'stripe'
+import { prisma } from '~/server/lib/prisma'
+import { ProvisioningService } from './core/ProvisioningService'
 
 // Initialize the Stripe client
 export const stripe = new Stripe(process.env.STRIPE_SECRET_KEY || '', {
   apiVersion: '2025-02-24.acacia',
   typescript: true
 })
+
+export default stripe
 
 // Customer management functions
 export async function createStripeCustomer(user: any) {
@@ -93,9 +97,9 @@ export class StripeService {
     await prisma.order.update({
       where: { id: order.id },
       data: {
-        status: 'PAID',
-        paidAt: new Date(),
-        stripePaymentIntentId: paymentIntent.id
+        status: 'PENDING',
+        updatedAt: new Date(),
+        // stripePaymentIntentId: paymentIntent.id
       }
     })
     
@@ -140,25 +144,73 @@ export class StripeService {
     await prisma.order.update({
       where: { id: order.id },
       data: {
-        status: 'FAILED',
-        stripePaymentIntentId: paymentIntent.id
+        status: 'UNPAID',
+        // stripePaymentIntentId: paymentIntent.id
       }
     })
   }
   
   // Provision game services after payment
-  private async provisionServices(order: any) {
-    // Import provisioning service
-    const { ProvisioningService } = await import('~/server/services/core/ProvisioningService')
+  async provisionServices(order: any) {
+    // Initialize the provisioning service
     const provisioningService = new ProvisioningService()
     
     // Process each order item
     for (const item of order.items) {
-      await provisioningService.provisionService({
-        userId: order.userId,
-        serviceType: item.plan.serviceType,
-        configuration: item.configuration
-      })
+      try {
+        console.log(`Provisioning service for order item: ${item.id}`)
+        
+        // Skip if not a game server
+        if (item.plan.serviceType !== 'GAME_SERVER') {
+          console.log(`Skipping non-game-server service type: ${item.plan.serviceType}`)
+          continue
+        }
+        
+        // Provision the service
+        await provisioningService.provisionService({
+          userId: order.userId,
+          serviceType: item.plan.serviceType,
+          configuration: {
+            gameType: this.determineGameType(item),
+            ram: item.configuration.ram || 4,
+            cpu: item.configuration.cpu || 2,
+            disk: item.configuration.disk || 50,
+            slots: item.configuration.slots || 20,
+            location: item.configuration.location || 'eu',
+            dedicatedIp: item.configuration.dedicatedIp || false
+          }
+        })
+        
+        console.log(`Service provisioning initiated for order item: ${item.id}`)
+      } catch (error) {
+        console.error(`Error provisioning service for item ${item.id}:`, error)
+        
+        // Log the error in the order
+        await prisma.orderItem.update({
+          where: { id: item.id },
+          data: {
+            data: `Provisioning error: ${error instanceof Error ? error.message : String(error)}`
+          }
+        })
+      }
     }
+  }
+  
+  // Determine game type from order item
+  private determineGameType(item: any): string {
+    // Try to get game type from configuration
+    if (item.configuration.gameType) {
+      return item.configuration.gameType
+    }
+    
+    // Try to infer from plan name
+    const planName = item.plan.name.toLowerCase()
+    if (planName.includes('minecraft')) return 'minecraft'
+    if (planName.includes('rust')) return 'rust'
+    if (planName.includes('zomboid') || planName.includes('project_zomboid')) return 'project_zomboid'
+    if (planName.includes('valheim')) return 'valheim'
+    
+    // Default to minecraft if can't determine
+    return 'minecraft'
   }
 }

@@ -389,11 +389,13 @@ private async processEnvironment(
   }
 
   async getServersFromUser(userId: string): Promise<PterodactylServer[]> {
-    const response = await ofetch(`${this.config.host}/api/application/users/${userId}/servers`, {
+    const response = await ofetch(`${this.config.host}/api/application/users/${userId}?include=servers`, {
       headers: this.getHeaders()
     })
 
-    return response.data.map((server: any) => ({
+    console.log('[Pterodactyl] User servers:', response.attributes.relationships.servers.data)
+
+    return response.attributes.relationships.servers.data.map((server: any) => ({
       id: server.attributes.id,
       identifier: server.attributes.identifier,
       name: server.attributes.name,

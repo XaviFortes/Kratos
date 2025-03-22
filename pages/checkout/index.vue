@@ -74,7 +74,7 @@
             </div>
             
             <div v-if="!paymentLoading">
-              <div id="payment-element" class="mb-6"></div>
+              <div ref="paymentElementRef" class="mb-6"></div>
               
               <button 
                 @click="processPayment"
@@ -99,6 +99,7 @@
 </template>
 
 <script setup>
+const paymentElementRef = ref(null);
 const { $toast, $stripe } = useNuxtApp();
 const router = useRouter();
 const loading = ref(true);
@@ -158,18 +159,24 @@ const initializeStripe = async () => {
         theme: 'night',
         variables: {
           colorPrimary: '#3b82f6',
+          colorBackground: '#2b3544',
         },
       },
     });
     
-    // Create and mount the Payment Element
+    // First set paymentLoading to false so the element appears in the DOM
+    paymentLoading.value = false;
+    
+    // Use nextTick to ensure the DOM has updated
+    await nextTick();
+    
+    // Now mount the payment element to the ref
     const paymentElement = elements.create('payment');
-    paymentElement.mount('#payment-element');
+    paymentElement.mount(paymentElementRef.value);
     
   } catch (error) {
     console.error('Stripe initialization error:', error);
     paymentError.value = 'Failed to initialize payment system';
-  } finally {
     paymentLoading.value = false;
   }
 };

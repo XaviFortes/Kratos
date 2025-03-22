@@ -31,6 +31,14 @@ enum OrderStatus {
   CANCELLED
 }
 
+enum ServiceStatus {
+  PENDING
+  INSTALLING
+  ACTIVE
+  SUSPENDED
+  CANCELLED
+}
+
 model User {
   id               String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   // Auth fields (keep existing auth structure)
@@ -97,6 +105,7 @@ model Service {
   type            ServiceType
   userId          String      @map("user_id") @db.Uuid
   hostId          String?     @map("host_id") @db.Uuid
+  status          ServiceStatus @default(PENDING)
   config          Json // Game: { game: 'minecraft', slots: 50 }, VPS: { os: 'ubuntu', cpu: 4 }
   terminationDate DateTime?   @map("termination_date")
   renewedAt       DateTime?   @map("renewed_at")
@@ -110,8 +119,21 @@ model Service {
   invoices     Invoice[]
   network      NetworkConfig?
   Subscription Subscription[]
+  deployments  ServiceDeployment[]
 
   @@map("services")
+}
+
+model ServiceDeployment {
+  id          String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  service     Service   @relation(fields: [serviceId], references: [id])
+  serviceId   String    @db.Uuid @map("service_id") // Add @db.Uuid here to match Service.id type
+  status      String    // PENDING, COMPLETED, FAILED
+  logs        String[]  // Array of log messages
+  createdAt   DateTime  @default(now())
+  completedAt DateTime? @map("completed_at")
+
+  @@map("service_deployments")
 }
 
 model PterodactylServer {
@@ -185,6 +207,7 @@ model OrderItem {
   id           String  @id @default(dbgenerated("gen_random_uuid()"))
   order        Order   @relation(fields: [orderId], references: [id])
   orderId      String  @db.Uuid
+  data         Json?
   plan         PricingPlan @relation(fields: [planId], references: [id])
   planId       String  @db.Uuid
   configuration Json
@@ -335,6 +358,7 @@ model Authenticator {
 enum InvoiceStatus {
   PENDING
   CREATED
+  UNPAID
   PAID
   PARTIAL
   FAILED
@@ -358,3 +382,4 @@ enum BillingCycle {
   SEMIANNUAL
   ANNUAL
 }
+
