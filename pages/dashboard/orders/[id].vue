@@ -118,46 +118,90 @@
                 <h3 class="text-gray-400">Payment Method</h3>
                 <button class="text-sm text-blue-400 hover:text-blue-300"
                         @click="openPaymentMethodModal">
-                  Change Card
+                  {{ order.paymentMethod ? 'Change Card' : 'Add Card' }}
                 </button>
               </div>
               <div class="bg-gray-900/50 p-4 rounded-lg flex items-center gap-4">
                 <Icon name="heroicons:credit-card" class="text-2xl text-gray-400" />
-                <span v-if="order.paymentMethod" class="font-mono text-lg text-gray-100">
-                  **** **** **** {{ order.paymentMethod?.card?.last4 || '1234' }}
+                <span v-if="order.paymentMethod?.card" class="font-mono text-lg text-gray-100">
+                  **** **** **** {{ order.paymentMethod.card.last4 }}
                 </span>
                 <span v-else class="text-sm text-gray-400">No payment method on file</span>
               </div>
             </div>
 
             <!-- Invoices -->
-            <div>
-              <h3 class="text-gray-400 mb-3">Recent Invoices</h3>
+            <!-- Update the invoices section to match the overall design -->
+            <div class="bg-gray-800 rounded-lg p-6 mb-6">
+              <h3 class="text-xl font-semibold text-gray-100 mb-4">Recent Invoices</h3>
+              
               <div v-if="order.invoices && order.invoices.length > 0">
                 <div v-for="invoice in order.invoices" :key="invoice.id"
-                     class="bg-gray-900/50 p-4 rounded-lg mb-2 flex items-center justify-between">
-                  <div>
-                    <div class="text-sm">{{ formatDate(invoice.createdAt) }}</div>
-                    <div :class="invoiceStatusColor(invoice.status)"
-                         class="text-xs">
-                      {{ invoice.status }}
+                     class="bg-gray-700/50 rounded-lg p-4 mb-3 hover:bg-gray-700/70 transition-colors">
+                  
+                  <div class="flex items-start justify-between">
+                    <div>
+                      <div class="flex items-center gap-2">
+                        <Icon 
+                          :name="getInvoiceIcon(invoice.status)" 
+                          class="text-lg" 
+                          :class="invoiceStatusColor(invoice.status)" 
+                        />
+                        <span class="font-medium text-gray-100">Invoice #{{ invoice.id.substring(0, 8) }}</span>
+                      </div>
+                      
+                      <div class="text-sm text-gray-400 mt-1">
+                        Period: {{ formatDate(invoice.periodStart) }} - {{ formatDate(invoice.periodEnd) }}
+                      </div>
+                    </div>
+                    
+                    <div class="text-right">
+                      <div class="text-xl font-bold text-purple-400">
+                        {{ formatCurrency(invoice.amount) }}
+                      </div>
+                      <div class="mt-1">
+                        <span 
+                          class="text-xs px-2 py-1 rounded-full"
+                          :class="getInvoiceStatusClass(invoice.status)">
+                          {{ invoice.status }}
+                        </span>
+                      </div>
                     </div>
                   </div>
-                  <div class="flex items-center gap-4">
-                    <div class="text-right">
-                      <div class="text-sm">{{ formatCurrency(invoice.amount) }}</div>
-                      <div class="text-xs text-gray-400">Monthly</div>
+                  
+                  <!-- Payment details or actions -->
+                  <div class="mt-3 flex justify-between items-center">
+                    <div class="text-sm text-gray-400">
+                      <span v-if="invoice.paidAt">
+                        Paid on {{ formatDate(invoice.paidAt) }}
+                      </span>
+                      <span v-else-if="invoice.status === 'UNPAID'">
+                        Due {{ formatDateRelative(invoice.dueDate || invoice.createdAt) }}
+                      </span>
                     </div>
-                    <button v-if="invoice.status === 'UNPAID'"
-                            class="pay-btn"
-                            @click="payInvoice(invoice)">
-                      Pay Now
-                    </button>
+                    
+                    <div class="flex gap-2">
+                      <button 
+                        v-if="invoice.status === 'UNPAID'"
+                        @click="payInvoice(invoice)"
+                        class="bg-purple-600 hover:bg-purple-700 text-white px-4 py-2 text-sm rounded-lg transition-colors">
+                        Pay Now
+                      </button>
+                      
+                      <button
+                        @click="downloadInvoice(invoice)"
+                        class="bg-gray-600/40 hover:bg-gray-600/60 text-gray-200 px-4 py-2 text-sm rounded-lg flex items-center gap-1 transition-colors">
+                        <Icon name="heroicons:document-arrow-down" class="text-sm" />
+                        Download
+                      </button>
+                    </div>
                   </div>
                 </div>
               </div>
-              <div v-else class="bg-gray-900/50 p-4 rounded-lg text-center text-gray-400 text-sm">
-                No invoices found
+              
+              <div v-else class="bg-gray-700/30 rounded-lg p-8 text-center">
+                <Icon name="heroicons:document-text" class="text-3xl text-gray-500 mb-2 mx-auto" />
+                <p class="text-gray-400">No invoices found for this order</p>
               </div>
             </div>
           </div>
@@ -180,7 +224,7 @@
               <div class="flex justify-between items-center">
                 <span class="text-gray-400">Next Renewal</span>
                 <span class="text-gray-100">
-                  {{ formatDate(order.nextBillingDate || new Date(Date.now() + 30*24*60*60*1000)) }}
+                  {{ formatDate(order.nextBillingDate || order.subscription?.currentPeriodEnd || new Date(Date.now() + 30*24*60*60*1000)) }}
                 </span>
               </div>
 
@@ -276,6 +320,39 @@
         </div>
       </div>
     </div>
+
+    <div v-if="showPaymentMethodModal" class="fixed inset-0 bg-black bg-opacity-50 backdrop-blur-sm flex items-center justify-center p-4 z-50">
+      <div class="bg-gray-800 p-6 rounded-xl w-full max-w-md border border-gray-700/50">
+        <div class="flex justify-between items-center mb-6">
+          <h3 class="text-xl font-bold text-gray-100">Update Payment Method</h3>
+          <button @click="showPaymentMethodModal = false" class="text-gray-400 hover:text-gray-200">
+            <Icon name="heroicons:x-mark" class="w-5 h-5" />
+          </button>
+        </div>
+        
+        <div id="payment-element" class="mb-6">
+          <!-- Stripe Elements will mount here -->
+          <div class="animate-pulse bg-gray-700/50 h-12 rounded-lg mb-2"></div>
+          <div class="animate-pulse bg-gray-700/50 h-12 rounded-lg mb-2"></div>
+          <div class="animate-pulse bg-gray-700/50 h-12 rounded-lg"></div>
+        </div>
+        
+        <div class="flex justify-end gap-3 mt-4">
+          <button 
+            @click="showPaymentMethodModal = false" 
+            class="px-4 py-2 bg-gray-700 text-gray-300 rounded-lg hover:bg-gray-600">
+            Cancel
+          </button>
+          <button 
+            @click="updatePaymentMethod" 
+            :disabled="updatingPayment" 
+            class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2">
+            <span v-if="updatingPayment" class="inline-block w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></span>
+            {{ updatingPayment ? 'Processing...' : 'Update Payment Method' }}
+          </button>
+        </div>
+      </div>
+    </div>
   </div>
 </template>
 
@@ -285,7 +362,7 @@ definePageMeta({
 });
 
 const route = useRoute();
-const { $toast } = useNuxtApp();
+const { $toast, $stripe } = useNuxtApp();
 
 const loading = ref(true);
 const error = ref(null);
@@ -295,7 +372,12 @@ const autoRenew = ref(true);
 // Modal states
 const showCancelModal = ref(false);
 const showDeleteModal = ref(false);
-const showPaymentMethodModal = ref(false);
+const showPaymentMethodModal = ref(false);  // This exists but wasn't being used correctly
+
+// Add these missing refs
+const paymentClientSecret = ref(null);
+const stripeElements = ref(null);
+const updatingPayment = ref(false);
 
 // Fetch order details
 const fetchOrder = async () => {
@@ -408,24 +490,36 @@ const refreshPaymentStatus = async () => {
 
 const payInvoice = async (invoice) => {
   try {
-    $toast.info('Preparing payment...');
-    const { url } = await $fetch(`/api/order/${order.value.id}/pay`, {
-      method: 'POST',
-      body: {
-        invoiceId: invoice.id
-      }
-    });
+    $toast.info('Processing payment...')
     
-    if (url) {
-      window.location.href = url;
+    const response = await $fetch(`/api/invoices/${invoice.id}/retry-payment`, {
+      method: 'POST'
+    })
+    
+    if (response.success) {
+      $toast.success('Payment processed successfully')
+      await fetchOrder() // Refresh order data
     } else {
-      throw new Error('No payment URL received');
+      // If not immediately successful, show info about processing
+      $toast.info(response.message || 'Payment is being processed')
+      
+      // Check again after a delay
+      setTimeout(async () => {
+        await fetchOrder()
+      }, 5000)
     }
   } catch (error) {
-    $toast.error('Failed to process payment');
-    console.error(error);
+    console.error('Error processing invoice payment:', error)
+    
+    // Check if it's a payment method issue
+    if (error.data?.message?.includes('payment_method')) {
+      $toast.error('Invalid payment method. Please update your payment details.')
+      openPaymentMethodModal() // Open modal to update payment method
+    } else {
+      $toast.error('Payment failed: ' + (error.data?.message || 'Unknown error'))
+    }
   }
-};
+}
 
 // Subscription management
 const toggleAutoRenew = async () => {
@@ -496,8 +590,118 @@ const deleteServer = async () => {
   }
 };
 
-const openPaymentMethodModal = () => {
-  $toast.info('Payment method update coming soon');
+const openPaymentMethodModal = async () => {
+  try {
+    const { clientSecret } = await $fetch(`/api/stripe/setup-intent`, { 
+      method: 'POST' 
+    });
+    
+    if (!clientSecret) {
+      throw new Error('Failed to create setup intent');
+    }
+    
+    // Show modal with Stripe Elements to update payment method
+    showPaymentMethodModal.value = true;  // Fixed variable name
+    paymentClientSecret.value = clientSecret;
+    
+    // Initialize after modal is shown
+    await nextTick();
+    await initializeStripeElements(clientSecret);
+    
+  } catch (error) {
+    console.error('Error setting up payment method update:', error);
+    $toast.error('Failed to initialize payment update');
+  }
+};
+
+// Add method to initialize Stripe elements for payment method update
+const initializeStripeElements = async (clientSecret) => {
+  try {
+    const stripeInstance = await $stripe();
+    const elements = stripeInstance.elements({
+      clientSecret,
+      appearance: { 
+        theme: 'night',
+        variables: {
+          colorPrimary: '#3b82f6',
+          colorBackground: '#1f2937',
+          fontFamily: 'Inter, system-ui, sans-serif',
+        }
+      }
+    });
+    
+    const paymentElement = elements.create('payment', {
+      fields: {
+        billingDetails: 'auto'
+      }
+    });
+    
+    // Wait for nextTick to ensure the DOM is ready
+    await nextTick();
+    const mountElement = document.getElementById('payment-element');
+    
+    if (mountElement) {
+      paymentElement.mount('#payment-element');
+      stripeElements.value = elements;
+    } else {
+      throw new Error('Payment element mount point not found');
+    }
+  } catch (error) {
+    console.error('Failed to initialize Stripe Elements:', error);
+    $toast.error('Failed to load payment form');
+    showPaymentMethodModal.value = false;
+  }
+};
+
+// Update the updatePaymentMethod function
+
+const updatePaymentMethod = async () => {
+  if (!stripeElements.value) {
+    $toast.error('Payment form not initialized');
+    return;
+  }
+  
+  try {
+    updatingPayment.value = true;
+    const stripeInstance = await $stripe();
+    
+    const { error, setupIntent } = await stripeInstance.confirmSetup({
+      elements: stripeElements.value,
+      redirect: 'if_required',
+      confirmParams: {
+        return_url: window.location.origin + route.fullPath,
+      }
+    });
+    
+    if (error) {
+      throw new Error(error.message);
+    }
+    
+    if (setupIntent?.status === 'succeeded') {
+      // Update the payment method on our backend
+      await $fetch(`/api/order/${order.value.id}/update-payment`, {
+        method: 'POST',
+        body: {
+          setupIntentId: setupIntent.id
+        }
+      });
+      
+      $toast.success('Payment method updated successfully');
+      showPaymentMethodModal.value = false;
+      await fetchOrder(); // Refresh order data
+    } else if (setupIntent?.status === 'requires_action') {
+      // Handle additional authentication steps if needed
+      $toast.info('Additional authentication required');
+      // The user will be redirected automatically by Stripe
+    } else {
+      throw new Error('Unexpected payment setup status');
+    }
+  } catch (error) {
+    console.error('Error updating payment method:', error);
+    $toast.error(error.message || 'Failed to update payment method');
+  } finally {
+    updatingPayment.value = false;
+  }
 };
 
 const openPauseModal = () => {
@@ -506,6 +710,69 @@ const openPauseModal = () => {
 
 const openUpgradeModal = () => {
   $toast.info('Upgrade feature coming soon');
+};
+
+// Add these helper methods to your script section
+
+// Get icon based on invoice status
+const getInvoiceIcon = (status) => {
+  return {
+    'PAID': 'heroicons:check-circle',
+    'UNPAID': 'heroicons:clock',
+    'PENDING': 'heroicons:clock',
+    'FAILED': 'heroicons:exclamation-circle',
+    'VOID': 'heroicons:x-circle'
+  }[status] || 'heroicons:document-text';
+};
+
+// Get status badge class
+const getInvoiceStatusClass = (status) => {
+  return {
+    'PAID': 'bg-green-400/20 text-green-400',
+    'UNPAID': 'bg-red-400/20 text-red-400',
+    'PENDING': 'bg-yellow-400/20 text-yellow-400',
+    'FAILED': 'bg-red-400/20 text-red-400',
+    'VOID': 'bg-gray-400/20 text-gray-400'
+  }[status] || 'bg-gray-400/20 text-gray-400';
+};
+
+// Format date in relative terms (e.g., "2 days ago", "in 3 days")
+const formatDateRelative = (dateString) => {
+  if (!dateString) return 'N/A';
+  
+  const date = new Date(dateString);
+  const now = new Date();
+  const diffTime = date - now;
+  const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+  
+  if (diffDays < 0) {
+    return Math.abs(diffDays) === 1 ? 'Yesterday' : `${Math.abs(diffDays)} days ago`;
+  } else if (diffDays === 0) {
+    return 'Today';
+  } else {
+    return diffDays === 1 ? 'Tomorrow' : `in ${diffDays} days`;
+  }
+};
+
+// Function to handle invoice download
+const downloadInvoice = async (invoice) => {
+  try {
+    $toast.info('Preparing invoice download...');
+    
+    // Implement actual download logic here
+    // For example:
+    const { url } = await $fetch(`/api/invoices/${invoice.id}/download`);
+    
+    if (url) {
+      // Open in new window or use direct download
+      window.open(url, '_blank');
+    } else {
+      throw new Error('No download URL available');
+    }
+  } catch (error) {
+    console.error('Failed to download invoice:', error);
+    $toast.error('Could not download invoice');
+  }
 };
 
 // Initialize data

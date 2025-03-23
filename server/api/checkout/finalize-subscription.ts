@@ -139,7 +139,7 @@ export default defineEventHandler(async (event) => {
         console.error('Subscription creation error:', error);
         throw createError({
             statusCode: 500,
-            message: 'Failed to create subscription: ' + (error.message || 'Unknown error')
+            message: 'Failed to create subscription: ' + (error instanceof Error ? error.message : 'Unknown error')
         });
     }
 });

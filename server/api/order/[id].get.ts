@@ -2,6 +2,7 @@
 import { z } from 'zod'
 import { prisma } from '~/server/lib/prisma'
 import { getServerSession } from '#auth'
+import { stripe } from '~/server/services/stripeService'
 
 const paramsSchema = z.object({
   id: z.string().uuid()
@@ -23,6 +24,7 @@ export default defineEventHandler(async (event) => {
       userId: session.user.id
     },
     include: {
+      service: true,
       items: {
         include: {
           plan: true
@@ -32,7 +34,8 @@ export default defineEventHandler(async (event) => {
         orderBy: {
           createdAt: 'desc'
         }
-      }
+      },
+      subscription: true
     }
   })
   
@@ -40,5 +43,35 @@ export default defineEventHandler(async (event) => {
     throw createError({ statusCode: 404, message: 'Order not found' })
   }
   
-  return order
+  // Enhance the response with Stripe data
+  let paymentMethod = null
+  let nextBillingDate = null
+  
+  if (order.subscription?.stripeSubscriptionId) {
+    try {
+      // Get subscription details from Stripe
+      const subscription = await stripe.subscriptions.retrieve(
+        order.subscription.stripeSubscriptionId,
+        { expand: ['default_payment_method'] }
+      )
+      
+      // Get next billing date
+      if (subscription.current_period_end) {
+        nextBillingDate = new Date(subscription.current_period_end * 1000).toISOString()
+      }
+      
+      // Get payment method
+      if (subscription.default_payment_method) {
+        paymentMethod = subscription.default_payment_method
+      }
+    } catch (error) {
+      console.error('Error fetching Stripe data:', error)
+    }
+  }
+  
+  return {
+    ...order,
+    nextBillingDate,
+    paymentMethod
+  }
 })

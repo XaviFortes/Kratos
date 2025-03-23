@@ -21,7 +21,7 @@ export class ServerMonitorService {
         try {
           // Get Pterodactyl server ID from service config
           const pterodactylServerId = (deployment.service?.config as { pterodactylServerId?: string })?.pterodactylServerId
-          
+
           if (!pterodactylServerId) {
             console.error(`No pterodactylServerId found for service ${deployment.serviceId}`)
             continue
