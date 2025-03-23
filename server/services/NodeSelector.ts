@@ -39,11 +39,13 @@ export class NodeSelector {
     // console.log('Host spec:', spec);
     const allocated = host.allocated as Record<string, number>;
     // console.log('Host allocated:', allocated);
-    const availableMemory = spec.ram - (allocated.ram || 0);
+    const availableMemory = spec.memory - (allocated.memory || 0);
     // console.log('Available memory:', availableMemory);
     const availableDisk = spec.storage - (allocated.storage || 0);
     // console.log('Available disk:', availableDisk);
-
+    console.log('Host:', host.id, 'Available:', availableMemory, availableDisk, spec.cpu);
+    console.log('Requirements:', req.memory, req.disk, req.cpu);
+    console.log(availableMemory - req.memory / 1024, availableDisk - req.disk / 1024, spec.cpu - req.cpu / 100);
     return Math.min(
       availableMemory - req.memory / 1024,
       availableDisk - req.disk / 1024,

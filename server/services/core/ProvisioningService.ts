@@ -1,20 +1,25 @@
 import { prisma } from "~/server/lib/prisma"
-import { ServiceType, Service } from "@prisma/client"
+import { ServiceType, Service, Prisma } from "@prisma/client"
 import { NodeSelector } from "../NodeSelector"
 import { PterodactylService } from "~/server/services/pterodactyl.service"
+import { ServerCreateParams } from "~/types/pterodactyl"
 
 interface ProvisioningParams {
   userId: string
   serviceType: ServiceType
-  configuration: {
-    gameType?: string
-    slots?: number
-    ram: number
-    cpu: number
-    disk: number
-    location?: string
-    dedicatedIp?: boolean
-  }
+  configuration: any // Using any here to fix compatibility issues
+}
+
+interface HostRequirements {
+  cpu: number
+  memory: number
+  disk: number
+  location: string
+}
+
+interface Host {
+  id: string;
+  // Add other host properties as needed
 }
 
 export class ProvisioningService {
@@ -25,18 +30,27 @@ export class ProvisioningService {
     console.log('Provisioning service:', params);
     
     // 1. Validate resources
-    const resourceRequirements = {
+    const resourceRequirements: HostRequirements = {
       cpu: params.configuration.cpu * 100, // Convert cores to % (100% per core)
       memory: params.configuration.ram * 1024, // Convert GB to MB
       disk: params.configuration.disk * 1024, // Convert GB to MB
-      location: params.configuration.location || 'eu'
+      location: String(params.configuration.location || 'eu') // Ensure location is a string
     };
 
     console.log('Resource requirements:', resourceRequirements);
 
     try {
-      // 2. Find suitable host
-      const host = await this.nodeSelector.findOptimalHost(resourceRequirements);
+      // Get user
+      const user = await prisma.user.findUnique({
+        where: { id: params.userId }
+      });
+
+      if (!user) {
+        throw new Error('User not found');
+      }
+
+      // 2. Find suitable host - fix the type
+      const host = await this.nodeSelector.findOptimalHost(resourceRequirements) as unknown as Host;
       
       if (!host) {
         console.error('No available hosts matching requirements');
@@ -45,14 +59,14 @@ export class ProvisioningService {
 
       // 3. If game server, handle with Pterodactyl
       if (params.serviceType === 'GAME_SERVER') {
-        return this.provisionGameServer(params, host);
+        return await this.provisionGameServer(params, host.id);
       } else {
         // 4. For other service types
-        return this.provisionGenericService(params, host);
+        return await this.provisionGenericService(params, host.id);
       }
-    } catch (error) {
+    } catch (error: unknown) {
       console.error('Provisioning error:', error);
-      throw new Error(`Service provisioning failed: ${error.message}`);
+      throw new Error(`Service provisioning failed: ${error instanceof Error ? error.message : 'Unknown error'}`);
     }
   }
 
@@ -67,33 +81,54 @@ export class ProvisioningService {
         throw new Error('User not found');
       }
 
-      // 2. Set up game-specific configuration
-      const gameConfig = this.getGameSpecificConfig(params.configuration);
+      // 2. Get nest and egg IDs from config or use defaults
+      const nestId = params.configuration.nestId || this.getNestId(params.configuration.gameType || 'minecraft');
+      const eggId = params.configuration.eggId || this.getEggId(
+        params.configuration.gameType || 'minecraft', 
+        params.configuration.eggType
+      );
       
-      // 3. Create server using Pterodactyl service
-      const serverConfig = {
+      console.log(`Using Nest ID: ${nestId}, Egg ID: ${eggId}`);
+      
+      // 3. Set up game-specific configuration
+      const gameConfig = this.getGameSpecificConfig({
+        ...params.configuration,
+        nest: params.configuration.gameType || 'minecraft',
+        egg: params.configuration.eggType || 'vanilla'
+      });
+      
+      // 4. Create the complete server configuration
+      const serverCreateParams: ServerCreateParams = {
+        servername: `game-${Date.now().toString().substring(7)}`,
         memory: params.configuration.ram * 1024,
         disk: params.configuration.disk * 1024,
         cpu: params.configuration.cpu * 100,
-        nest: this.getNestIdForGame(params.configuration.gameType),
-        egg: this.getEggIdForGame(params.configuration.gameType),
-        location: params.configuration.location || 'eu',
-        servername: `${params.configuration.gameType}-${Date.now().toString().substring(7)}`,
-        ...gameConfig
+        nest: nestId,
+        egg: eggId,
+        swap: 2048,
+        io: 500,
+        location: 0, // Default location
+        databases: 0,
+        backups: 0,
+        allocation_limit: 0,
+        allocation: {
+          default: 0
+        },
+        ...gameConfig  // Merge game-specific config
       };
       
-      // 4. Use Pterodactyl service to create the server
-      const service = await this.pterodactyl.createServer(user, serverConfig);
+      // 5. Use Pterodactyl service to create the server
+      const service = await this.pterodactyl.createServer(user, serverCreateParams);
       
-      // 5. Update host status
-      await prisma.host.update({
-        where: { id: hostId },
-        data: { 
-          status: 'ALLOCATED',
-        }
-      });
+      // 6. Update host status
+      // await prisma.host.update({
+        // where: { id: hostId },
+        // data: { 
+          // status: 'ALLOCATED',
+        // }
+      // });
 
-      // 6. Create service tracking record for monitoring
+      // 7. Create service tracking record for monitoring
       await prisma.serviceDeployment.create({
         data: {
           serviceId: service.id,
@@ -103,48 +138,81 @@ export class ProvisioningService {
       });
       
       return service;
-    } catch (error) {
+    } catch (error: unknown) {
       console.error('Game server provisioning error:', error);
       throw error;
     }
   }
 
   private async provisionGenericService(params: ProvisioningParams, hostId: string): Promise<Service> {
-    // Create the service record
+    // Create the service record with properly typed config
     const service = await prisma.service.create({
       data: {
         type: params.serviceType,
         userId: params.userId,
         hostId: hostId,
-        config: this.buildServiceConfig(params),
+        config: this.buildServiceConfig(params) as Prisma.JsonObject,
       },
     });
 
     // Update host status
-    await prisma.host.update({
-      where: { id: hostId },
-      data: { status: 'ALLOCATED' }
-    });
+    // await prisma.host.update({
+      // where: { id: hostId },
+      // data: { status: 'ALLOCATED' }
+    // });
 
     return service;
   }
 
   private getGameSpecificConfig(config: any): any {
-    const gameType = config.gameType?.toLowerCase();
+    const nestType = config.nest?.toLowerCase();
+    const eggType = config.egg?.toLowerCase();
     
-    switch (gameType) {
+    // Default config for the nest type
+    let baseConfig: any = {};
+    
+    // Nest-specific configurations
+    switch (nestType) {
       case 'minecraft':
-        return {
+        baseConfig = {
           environment: {
-            SERVER_JARFILE: 'server.jar',
-            MINECRAFT_VERSION: config.version || 'latest',
             MEMORY: `${config.ram}G`,
             DIFFICULTY: 'normal',
             MAX_PLAYERS: config.slots || 20,
           }
         };
+        
+        // Egg-specific configurations
+        switch (eggType) {
+          case 'vanilla':
+            baseConfig.environment.SERVER_JARFILE = 'server.jar';
+            baseConfig.environment.MINECRAFT_VERSION = config.version || 'latest';
+            break;
+          case 'paper':
+            baseConfig.environment.SERVER_JARFILE = 'paper.jar';
+            baseConfig.environment.MINECRAFT_VERSION = config.version || 'latest';
+            baseConfig.environment.BUILD_TYPE = 'recommended';
+            break;
+          case 'forge':
+            baseConfig.environment.SERVER_JARFILE = 'forge-server.jar';
+            baseConfig.environment.MINECRAFT_VERSION = config.version || '1.19.2';
+            baseConfig.environment.FORGE_VERSION = config.forgeVersion || 'recommended';
+            break;
+          case 'fabric':
+            baseConfig.environment.SERVER_JARFILE = 'fabric-server.jar';
+            baseConfig.environment.MINECRAFT_VERSION = config.version || 'latest';
+            baseConfig.environment.FABRIC_VERSION = config.fabricVersion || 'latest';
+            break;
+          default:
+            // Default to vanilla configuration
+            baseConfig.environment.SERVER_JARFILE = 'server.jar';
+            baseConfig.environment.MINECRAFT_VERSION = config.version || 'latest';
+        }
+        break;
+        
       case 'project_zomboid':
-        return {
+        // No egg differentiation for Project Zomboid yet
+        baseConfig = {
           environment: {
             ADMIN_PASSWORD: 'kratos_host',
             SERVER_MEMORY: `${config.ram}G`,
@@ -154,8 +222,12 @@ export class ProvisioningService {
             RCON_PORT: 27015,
           }
         };
+        break;
+        
+      // Continue with other nest types
       case 'rust':
-        return {
+        // No egg differentiation for Rust yet
+        baseConfig = {
           environment: {
             MAX_PLAYERS: config.slots || 50,
             SERVER_LEVEL: 'Procedural Map',
@@ -164,8 +236,11 @@ export class ProvisioningService {
             SEED: Math.floor(Math.random() * 100000).toString(),
           }
         };
+        break;
+        
       case 'valheim':
-        return {
+        // No egg differentiation for Valheim yet
+        baseConfig = {
           environment: {
             SERVER_NAME: `Valheim Server ${Date.now().toString().substring(7)}`,
             WORLD_NAME: 'valheim_world',
@@ -173,41 +248,59 @@ export class ProvisioningService {
             PUBLIC: '1',
           }
         };
-      default:
-        return {};
+        break;
     }
+    
+    return baseConfig;
   }
 
-  private getNestIdForGame(gameType: string): number {
-    // Placeholder - replace with your actual nest IDs from Pterodactyl
-    const gameNests = {
+  private getNestId(nestType: string): number {
+    // Map nest types to nest IDs
+    const nestMapping = {
       'minecraft': 1,
       'project_zomboid': 2,
       'rust': 3,
       'valheim': 4,
     };
 
-    return gameNests[gameType?.toLowerCase() as keyof typeof gameNests] || 1;
+    return nestMapping[nestType?.toLowerCase() as keyof typeof nestMapping] || 1;
   }
 
-  private getEggIdForGame(gameType: string): number {
-    // Placeholder - replace with your actual egg IDs from Pterodactyl
-    const gameEggs = {
-      'minecraft': 1,
-      'project_zomboid': 16,
-      'rust': 2,
-      'valheim': 15,
+  private getEggId(nestType: string, eggType?: string): number {
+    // Define mappings for each nest type to its available eggs
+    const eggMappings: Record<string, Record<string, number>> = {
+      'minecraft': {
+        'vanilla': 3,  // Updated to match your config template
+        'paper': 1,    // Paper Spigot, ID 1
+        'forge': 4,    // Updated to match your config template
+        'spigot': 1,   // Using Paper ID since it's a variant of Spigot
+        'fabric': 12,
+        'default': 3   // Default to vanilla if not specified
+      },
+      'project_zomboid': {
+        'default': 16
+      },
+      'rust': {
+        'default': 2
+      },
+      'valheim': {
+        'default': 15
+      }
     };
 
-    return gameEggs[gameType?.toLowerCase() as keyof typeof gameEggs] || 1;
+    // Get the egg mapping for this nest type
+    const nestEggs = eggMappings[nestType?.toLowerCase()] || {};
+    
+    // Return the specific egg ID if provided and exists, otherwise return default
+    return (eggType && nestEggs[eggType.toLowerCase()]) || nestEggs['default'] || 1;
   }
 
-  private buildServiceConfig(params: ProvisioningParams) {
+  private buildServiceConfig(params: ProvisioningParams): Record<string, any> {
     switch (params.serviceType) {
       case 'GAME_SERVER':
         return {
-          gameType: params.configuration.gameType,
-          slots: params.configuration.slots,
+          nest: params.configuration.nestId || this.getNestId(params.configuration.gameType),
+          egg: params.configuration.eggId || this.getEggId(params.configuration.gameType, params.configuration.eggType),
           ram: params.configuration.ram,
           cpu: params.configuration.cpu,
           disk: params.configuration.disk
@@ -224,7 +317,7 @@ export class ProvisioningService {
     }
   }
 
-  private async generateNetworkConfig() {
+  private async generateNetworkConfig(): Promise<{ipv4: string, ports: {tcp: number[]}}> {
     // Implementation depends on your network management
     return {
       ipv4: await this.allocateIPv4Address(),
@@ -236,4 +329,69 @@ export class ProvisioningService {
     // This is a placeholder - implement your IP allocation strategy
     return '192.168.1.1';
   }
+
+  // async createPterodactylServer(service: any, gameConfig: any): Promise<void> {
+  //   try {
+  //     // Get the user
+  //     const user = await prisma.user.findUnique({
+  //       where: { id: service.userId }
+  //     });
+      
+  //     if (!user) {
+  //       throw new Error('User not found');
+  //     }
+      
+  //     // Ensure the user has a Pterodactyl ID
+  //     if (!user.pteroUserId) {
+  //       // Create the user in Pterodactyl first
+  //       const pterodactylUser = await this.pterodactyl.createUser(user);
+        
+  //       // Update the user with their Pterodactyl ID
+  //       await prisma.user.update({
+  //         where: { id: user.id },
+  //         data: { pteroUserId: pterodactylUser.id }
+  //       });
+  //     }
+      
+  //     // Extract configuration details
+  //     const config = service.config || {};
+      
+  //     // Create the server in Pterodactyl
+  //     const serverParams = {
+  //       name: `game-${service.id.substring(0, 8)}`,
+  //       user: user.pteroUserId,
+  //       egg: config.eggId || 1,
+  //       nest: config.nestId || 1,
+  //       memory: (config.ram || 4) * 1024,
+  //       disk: (config.disk || 50) * 1024,
+  //       cpu: (config.cpu || 2) * 100,
+  //       // Other required params...
+  //       swap: 0,
+  //       io: 500,
+  //       location: 1, // Default location ID
+  //       databases: 0,
+  //       backups: 0,
+  //       allocation_limit: 0,
+  //       environment: gameConfig?.environment || {}
+  //     };
+      
+  //     // Call Pterodactyl API to create the server
+  //     const pterodactylServer = await this.pterodactyl.createServer(user, serverParams);
+      
+  //     // Link the Pterodactyl server to our service
+  //     await prisma.pterodactylServer.create({
+  //       data: {
+  //         serviceId: service.id,
+  //         pterodactylId: pterodactylServer.id || `temp_${Date.now()}`,
+  //         status: 'INSTALLING'
+  //       }
+  //     });
+      
+  //     console.log(`Created Pterodactyl server for service ${service.id}`);
+      
+  //   } catch (error) {
+  //     console.error('Failed to create Pterodactyl server:', error);
+  //     throw error;
+  //   }
+  // }
 }

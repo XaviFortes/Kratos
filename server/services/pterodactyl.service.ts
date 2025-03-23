@@ -2,6 +2,7 @@ import { ofetch } from 'ofetch'
 import type { User, Service } from '@prisma/client'
 import { Allocation, NodeResource, NodeWithLocation, PterodactylServer, ServerCreateParams } from '~/types/pterodactyl'
 import { prisma } from '~/server/lib/prisma'
+import { server } from 'typescript'
 
 export class PterodactylService {
   private readonly config = {
@@ -24,16 +25,9 @@ export class PterodactylService {
           cpu: config.cpu,
           disk: config.disk,
           pterodactylServerId: serverDetails.id.toString(),
-          gameType: 'minecraft'
-        },
-        networkConfig: {
-          create: {
-            ipv4: serverDetails.allocation.ip,
-            ports: { tcp: [serverDetails.allocation.port] }
-          }
+          egg: config.egg,
         }
-      },
-      include: { networkConfig: true }
+      }
     });
   }
 
@@ -42,29 +36,30 @@ export class PterodactylService {
       const response = await ofetch(`${this.config.host}/api/application/users?filter[email]=${user.email}`, {
         headers: this.getHeaders()
       });
+      console.log('[Pterodactyl] User search response:', response.data)
 
       if (response.data.length > 0) {
         return response.data[0].attributes.id;
       }
+
+      const username = this.generateUsername(user.email);
+      console.log('[Pterodactyl] Creating user:', username)
 
       const newUser = await ofetch(`${this.config.host}/api/application/users`, {
         method: 'POST',
         headers: this.getHeaders(),
         body: {
           email: user.email,
-          username: this.generateUsername(user.email),
-          first_name: user.firstName || '',
-          last_name: user.lastName || '',
+          username: username,
+          first_name: username,
+          last_name: 'Kratos',
         }
       });
 
       await prisma.user.update({
         where: { id: user.id },
         data: { 
-          config: {
-            ...(user.config as object || {}),
-            pterodactylUserId: newUser.attributes.id
-          }
+          pteroUserId: newUser.attributes.id
         }
       });
 

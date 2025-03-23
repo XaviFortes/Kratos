@@ -1,5 +1,6 @@
-import { stripe } from '~/server/services/stripeService'
+import { stripe, StripeService } from '~/server/services/stripeService'
 import { PaymentService } from '~/server/services/order/PaymentService'
+import { ProvisioningService } from '~/server/services/core/ProvisioningService'
 
 export default defineEventHandler(async (event) => {
   const body = await readRawBody(event)
@@ -24,6 +25,7 @@ export default defineEventHandler(async (event) => {
   }
   
   const paymentService = new PaymentService()
+  const stripeService = new StripeService()
   
   try {
     console.log(`Processing Stripe webhook event: ${stripeEvent.type}`)
@@ -65,21 +67,48 @@ export default defineEventHandler(async (event) => {
         console.log('Invoice voided')
         await handleVoidedInvoice(stripeEvent.data.object)
         break
+
+      // Add handlers for currently unhandled events
+      case 'payment_method.attached':
+        console.log('Payment method attached')
+        // No specific action needed
+        break
       
       // Subscription events
       case 'customer.subscription.created':
+        console.log('Subscription created')
+        await updateSubscriptionInDatabase(stripeEvent.data.object)
+        break
+
       case 'customer.subscription.updated':
+        console.log('Subscription updated')
+        await updateSubscriptionInDatabase(stripeEvent.data.object)
+        break
+
       case 'customer.subscription.deleted':
         console.log(`Subscription ${stripeEvent.type.split('.')[2]}`)
         await updateSubscriptionInDatabase(stripeEvent.data.object)
         break
       
+      // Setup intent events - add support for them
+      case 'setup_intent.created':
+      case 'setup_intent.succeeded':
+          console.log(`Setup intent ${stripeEvent.type.split('.')[1]}`)
+          // No action needed, handled by checkout process
+          break
+      
       // Payment Intent events
       case 'payment_intent.succeeded':
+        await stripeService.processWebhook(stripeEvent)
+        break
       case 'payment_intent.payment_failed':
       case 'payment_intent.canceled':
         // Let the PaymentService handle payment intent events
         await paymentService.handleWebhook(stripeEvent)
+        break
+      case 'payment_intent.created':
+        console.log(`Payment intent ${stripeEvent.type.split('.')[1]}`)
+        // May need to handle these depending on your flow
         break
         
       default:
@@ -95,7 +124,7 @@ export default defineEventHandler(async (event) => {
     console.error('Error processing webhook:', error)
     throw createError({ 
       statusCode: 500, 
-      message: `Error processing webhook: ${error instanceof Error ? error.message : 'Unknown error'}`
+      message: `Error processing webhook: ${error instanceof Error ? error.message : 'Unknown error'}` 
     })
   }
 })
@@ -140,29 +169,35 @@ async function syncStripeInvoiceToDatabase(stripeInvoice: any) {
     
     type StripeInvoiceStatus = keyof typeof statusMap
     
-    // Include more details from the invoice for better record keeping
+    // Include only fields that exist in your schema
     const invoiceData = {
       stripeInvoiceId: stripeInvoice.id,
       orderId: orderId,
       userId: order.userId,
-      amount: stripeInvoice.total / 100, // Convert from cents
-      // subtotal: stripeInvoice.subtotal / 100,
+      amount: stripeInvoice.amount_due / 100, // Convert from cents
+      subtotal: stripeInvoice.subtotal / 100,
       tax: (stripeInvoice.tax || 0) / 100,
       status: statusMap[stripeInvoice.status as StripeInvoiceStatus] || 'PENDING',
       periodStart: new Date(stripeInvoice.period_start * 1000),
       periodEnd: new Date(stripeInvoice.period_end * 1000),
-      dueDate: stripeInvoice.due_date ? new Date(stripeInvoice.due_date * 1000) : null,
+      // Remove dueDate field
       paidAt: stripeInvoice.status === 'paid' ? new Date() : null,
       description: stripeInvoice.description || `Invoice for ${order.items?.[0]?.plan?.name || 'subscription'}`
     }
+    
+    // Remove fields that don't exist in your schema
+    const { subtotal, tax, description, ...validInvoiceData } = invoiceData;
     
     // Create or update invoice in our database
     await prisma.invoice.upsert({
       where: { 
         stripeInvoiceId: stripeInvoice.id 
       },
-      update: invoiceData,
-      create: invoiceData
+      update: validInvoiceData,
+      create: {
+        ...validInvoiceData,
+        // Add any required fields that might be missing
+      }
     })
     
     console.log(`Invoice ${stripeInvoice.id} synced for order ${orderId}`)
@@ -202,25 +237,37 @@ async function handleSuccessfulPayment(stripeInvoice: any) {
       
       // If service is in PENDING state, trigger provisioning
       if (order.service && order.service.status === 'PENDING') {
-        console.log(`Creating service deployment for order ${orderId}`)
-        
-        // Create a deployment record
-        await prisma.serviceDeployment.create({
-          data: {
-            serviceId: order.service.id,
-            status: 'PENDING',
-            logs: ['Deployment initiated via invoice payment']
-          }
-        })
-        
-        // The ServerMonitorService will pick up this deployment and process it
+        try {
+          console.log(`Creating service deployment for order ${orderId}`)
+          
+          // Create a deployment record
+          await prisma.serviceDeployment.create({
+            data: {
+              serviceId: order.service.id,
+              status: 'PENDING',
+              logs: ['Deployment initiated via invoice payment']
+            }
+          })
+          
+          // The provisioning service will pick this up later
+        } catch (provisioningError) {
+          console.error('Error during service provisioning:', provisioningError)
+          
+          // Update service with error status
+          await prisma.service.update({
+            where: { id: order.service.id },
+            data: {
+              status: 'SUSPENDED' // Use a valid value from your ServiceStatus enum
+            }
+          })
+        }
       }
     }
     
-    // Send payment confirmation email
+    // Send payment confirmation email if needed
     const order = await getOrderFromInvoice(stripeInvoice)
     if (order?.user?.email) {
-      // Send payment confirmation email
+      // Send payment confirmation email (implement this later)
       console.log(`Would send payment confirmation to ${order.user.email}`)
     }
     
@@ -350,9 +397,8 @@ async function updateSubscriptionInDatabase(stripeSubscription: any) {
       where: { stripeSubscriptionId: stripeSubscription.id },
       data: {
         status: stripeSubscription.status,
-        currentPeriodEnd: new Date(stripeSubscription.current_period_end * 1000),
         currentPeriodStart: new Date(stripeSubscription.current_period_start * 1000),
-        cancelAtPeriodEnd: stripeSubscription.cancel_at_period_end,
+        currentPeriodEnd: new Date(stripeSubscription.current_period_end * 1000),
         canceledAt: stripeSubscription.canceled_at ? new Date(stripeSubscription.canceled_at * 1000) : null
       }
     })

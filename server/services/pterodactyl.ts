@@ -280,4 +280,14 @@ export class PterodactylService {
             throw error;
         }
     }
+
+    /**
+     * Get Locations
+     * @returns Locations list
+     */
+    async getLocations() {
+        return $fetch(`${this.config.public.pterodactylUrl}/api/application/locations?include=nodes`, {
+            headers: this.headers
+        })
+    }
 }

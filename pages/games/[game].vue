@@ -13,6 +13,48 @@
           <h1 class="text-3xl font-bold mb-6">{{ game.name }} Configuration</h1>
           
           <div class="space-y-8">
+            <!-- Server Location Selection -->
+            <div v-if="locations.length > 0" class="space-y-3">
+              <div class="flex justify-between">
+                <h3 class="text-lg font-medium">Server Location</h3>
+                <span class="text-sm text-gray-400">Choose where your server will be hosted</span>
+              </div>
+              
+              <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+                <label 
+                  v-for="location in locations" 
+                  :key="location.id" 
+                  class="flex flex-col cursor-pointer"
+                >
+                  <input
+                    type="radio"
+                    name="location"
+                    :value="location.id"
+                    v-model="serverConfig.locationId"
+                    class="hidden"
+                  >
+                  <div
+                    :class="[
+                      'p-4 rounded-lg border transition-all',
+                      serverConfig.locationId === location.id
+                        ? 'border-blue-500 bg-blue-500/10'
+                        : 'border-gray-700 hover:border-blue-400'
+                    ]"
+                  >
+                    <div class="flex justify-between items-start">
+                      <div>
+                        <div class="text-lg font-semibold">{{ location.name }}</div>
+                        <div class="text-sm text-gray-400">{{ location.description }}</div>
+                      </div>
+                      <div class="mt-1">
+                        <PingTester :host="location.host.fqdn" />
+                      </div>
+                    </div>
+                  </div>
+                </label>
+              </div>
+            </div>
+
             <!-- Server resources configuration -->
             <div v-for="field in configFields" :key="field.key" class="space-y-3">
               <div class="flex justify-between">
@@ -46,6 +88,37 @@
                 </div>
               </div>
             </div>
+
+            <!-- Game Type Selection -->
+            <div v-if="eggOptions.length > 0" class="space-y-3">
+              <div class="flex justify-between">
+                <h3 class="text-lg font-medium">Server Type</h3>
+              </div>
+              
+              <div class="grid grid-cols-2 md:grid-cols-3 gap-3">
+                <div v-for="egg in eggOptions" :key="egg.id" class="col-span-1">
+                  <label class="flex flex-col cursor-pointer">
+                    <input
+                      type="radio"
+                      name="egg"
+                      :value="egg.id"
+                      v-model="serverConfig.eggId"
+                      class="hidden"
+                    >
+                    <div
+                      :class="[
+                        'p-4 rounded-lg border transition-all',
+                        serverConfig.eggId === egg.id
+                          ? 'border-blue-500 bg-blue-500/10'
+                          : 'border-gray-700 hover:border-blue-400'
+                      ]"
+                    >
+                      <div class="text-lg font-semibold text-center">{{ egg.name }}</div>
+                    </div>
+                  </label>
+                </div>
+              </div>
+            </div>
           </div>
         </div>
 
@@ -58,6 +131,16 @@
               <div class="flex justify-between">
                 <span class="text-gray-400">Base Price:</span>
                 <span>${{ basePrice }}/mo</span>
+              </div>
+              
+              <div v-if="getSelectedLocation" class="flex justify-between">
+                <span class="text-gray-400">Location:</span>
+                <span>{{ getSelectedLocation.name }}</span>
+              </div>
+
+              <div v-if="getSelectedEgg" class="flex justify-between">
+                <span class="text-gray-400">Server Type:</span>
+                <span>{{ getSelectedEgg.name }}</span>
               </div>
               
               <div v-for="(price, field) in modifierPrices" :key="field" class="flex justify-between">
@@ -98,16 +181,40 @@ const game = ref({});
 const pricingPlan = ref(null);
 const serverConfig = ref({});
 const isAddingToCart = ref(false);
+// const eggOptions = ref([]);
+
+// State variables
+const locations = ref([]);
+const loadingLocations = ref(true);
+
+// Load locations
+const fetchLocations = async () => {
+  try {
+    
+    loadingLocations.value = true;
+    const locationsData = await $fetch('/api/pterodactyl/locations');
+    locations.value = locationsData;
+    console.log(locationsData);
+  } catch (error) {
+    console.error('Error fetching locations:', error);
+    $toast.error('Failed to load server locations');
+  } finally {
+    loadingLocations.value = false;
+  }
+};
 
 // Get game data
 const getGameData = async () => {
   try {
-    // Fetch the game details (adjust endpoint as needed)
-    const gameData = await $fetch(`/api/games/${route.params.game}`);
+    // Load locations in parallel with other data
+    const [gameData, plans] = await Promise.all([
+      $fetch(`/api/games/${route.params.game}`),
+      $fetch('/api/admin/pricing-plans'),
+      fetchLocations() // This doesn't return a value, it updates locations.value
+    ]);
+    
     game.value = gameData;
     
-    // Fetch the pricing plan for this game
-    const plans = await $fetch('/api/admin/pricing-plans');
     pricingPlan.value = plans.find(p => 
       p.serviceType === 'GAME_SERVER' && 
       p.name.toLowerCase().includes(route.params.game.toLowerCase())
@@ -128,15 +235,26 @@ const getGameData = async () => {
   }
 };
 
-// Initialize configuration based on pricing plan
+// Update the initializeConfig function
+
 const initializeConfig = () => {
   // Create default configuration based on pricing model
   const config = {};
   
   // Use the configuration template or extract from pricing model modifiers
   if (pricingPlan.value.configTemplate) {
+    // Copy basic config values
     for (const [key, value] of Object.entries(pricingPlan.value.configTemplate)) {
-      config[key] = value;
+      // Only copy simple values, not arrays or objects
+      if (typeof value !== 'object') {
+        config[key] = value;
+      }
+    }
+    
+    // Set default egg if available
+    if (pricingPlan.value.configTemplate.eggs?.length > 0) {
+      config.eggId = pricingPlan.value.configTemplate.eggs[0].id;
+      config.nestId = pricingPlan.value.configTemplate.nest;
     }
   }
   
@@ -148,10 +266,15 @@ const initializeConfig = () => {
         // Set default values based on type
         if (modifier.type === 'per_unit') {
           config[modifier.field] = modifier.unit === 'gb' ? 4 : 
-                                   modifier.unit === 'cores' ? 2 : 1;
+                                  modifier.unit === 'cores' ? 2 : 1;
         }
       }
     }
+  }
+  
+  // Set default location if locations are available
+  if (locations.value.length > 0) {
+    config.locationId = locations.value[0].id;
   }
   
   serverConfig.value = config;
@@ -166,7 +289,7 @@ const configFields = computed(() => {
     let options = [];
     
     if (modifier.field === 'ram') {
-      options = [4, 8, 16, 32].map(value => ({ 
+      options = [2, 4, 8, 12, 16, 24, 32].map(value => ({ 
         value, 
         label: `${value} GB` 
       }));
@@ -289,6 +412,31 @@ const addToCart = async () => {
     isAddingToCart.value = false;
   }
 };
+
+// Get available egg options from the config template
+const eggOptions = computed(() => {
+  const configTemplate = pricingPlan.value?.configTemplate;
+  if (!configTemplate || !configTemplate.eggs || !Array.isArray(configTemplate.eggs)) {
+    return [];
+  }
+  
+  return configTemplate.eggs.map(egg => ({
+    id: egg.id,
+    name: egg.name
+  }));
+});
+
+// Get the currently selected egg
+const getSelectedEgg = computed(() => {
+  if (!serverConfig.value.eggId || !eggOptions.value.length) return null;
+  return eggOptions.value.find(egg => egg.id === serverConfig.value.eggId);
+});
+
+// Add selected location to computed properties
+const getSelectedLocation = computed(() => {
+  if (!serverConfig.value.locationId || !locations.value.length) return null;
+  return locations.value.find(location => location.id === serverConfig.value.locationId);
+});
 
 // Fetch data on mount
 onMounted(getGameData);

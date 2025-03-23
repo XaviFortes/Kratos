@@ -40,8 +40,8 @@
                 <h3 class="text-xl font-bold text-gray-100 flex items-center gap-2">
                   <span class="w-2 h-2 rounded-full" 
                         :class="statusColor(order.status)"></span>
-                  {{ serviceTypeIcon(order.items[0].plan?.serviceType || 'GAME_SERVER') }} 
-                  {{ order.items[0].plan?.name || 'Server' }}
+                  {{ getServiceTypeIcon(order) }} 
+                  {{ getPlanName(order) }}
                 </h3>
                 <p class="text-sm text-gray-400">#{{ order.id?.slice(0,8) || 'N/A' }}</p>
               </div>
@@ -55,13 +55,13 @@
             <div class="space-y-4">
               <div class="flex justify-between items-center">
                 <span class="text-gray-400">Plan:</span>
-                <span class="text-gray-100 font-mono">{{ order.items[0].plan?.name }}</span>
+                <span class="text-gray-100 font-mono">{{ getPlanName(order) }}</span>
               </div>
               
               <div class="bg-gray-900/50 p-4 rounded-lg">
                 <div class="text-sm text-gray-400 mb-2">Configuration</div>
-                <div v-if="order.items && order.items[0]?.configuration" 
-                     v-for="(value, key) in order.items[0].configuration" 
+                <div v-if="hasConfiguration(order)" 
+                     v-for="(value, key) in getOrderConfiguration(order)" 
                      :key="key" 
                      class="flex justify-between text-sm py-1">
                   <span class="text-gray-400 capitalize">{{ formatConfigKey(key) }}:</span>
@@ -147,6 +147,38 @@ const monthlySpending = computed(() => {
   
   return formatCurrency(total);
 });
+
+// Helper functions to safely access order data
+const getPlanName = (order) => {
+  if (!order.items || !order.items.length || !order.items[0].plan) {
+    return 'Server';
+  }
+  return order.items[0].plan.name || 'Server';
+};
+
+const getServiceType = (order) => {
+  if (!order.items || !order.items.length || !order.items[0].plan) {
+    return 'GAME_SERVER';
+  }
+  return order.items[0].plan.serviceType || 'GAME_SERVER';
+};
+
+const getServiceTypeIcon = (order) => {
+  const type = getServiceType(order);
+  return serviceTypeIcon(type);
+};
+
+const hasConfiguration = (order) => {
+  return order.items && 
+         order.items.length > 0 && 
+         order.items[0].configuration && 
+         Object.keys(order.items[0].configuration).length > 0;
+};
+
+const getOrderConfiguration = (order) => {
+  if (!hasConfiguration(order)) return {};
+  return order.items[0].configuration;
+};
 
 // Format helpers
 const formatConfigKey = (key) => {

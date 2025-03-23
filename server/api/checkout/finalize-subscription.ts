@@ -111,8 +111,8 @@ export default defineEventHandler(async (event) => {
         await prisma.order.update({
             where: { id: order.id },
             data: {
-                serviceId: service.id,
-                status: 'ACTIVE'
+                status: 'PENDING',
+                serviceId: service.id
             }
         });
 
@@ -121,10 +121,11 @@ export default defineEventHandler(async (event) => {
             data: {
                 stripeSubscriptionId: subscription.id,
                 status: 'active',
+                currentPeriodStart: new Date(), // Add this required field
                 currentPeriodEnd: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000), // 30 days from now
                 orderId: order.id,
                 userId: session.user.id,
-                serviceId: service.id, // Now we have a valid service ID
+                serviceId: service.id,
             }
         });
         

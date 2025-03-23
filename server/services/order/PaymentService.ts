@@ -84,12 +84,12 @@ export class PaymentService {
       await prisma.order.update({
         where: { id: orderId },
         data: {
-          status: 'ACTIVE',
+          status: 'PENDING',
           updatedAt: new Date()
         }
       });
       
-      console.log(`Order ${orderId} status updated to ACTIVE`);
+      console.log(`Order ${orderId} status updated to PENDING`);
     } catch (error) {
       console.error(`Failed to update order ${orderId}:`, error);
     }

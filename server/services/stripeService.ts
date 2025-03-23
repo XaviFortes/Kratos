@@ -70,16 +70,26 @@ export class StripeService {
   
   // Fulfill the order after successful payment
   private async fulfillOrder(paymentIntent: Stripe.PaymentIntent) {
-    const { userId } = paymentIntent.metadata || {}
+    console.log('Fulfilling payment intent:', paymentIntent)
+    const customer = paymentIntent.customer || {}
     
-    if (!userId) {
-      throw new Error('User ID not found in payment metadata')
+    if (!customer) {
+      throw new Error('Customer ID not found in payment metadata')
+    }
+
+    // Find user by customer ID
+    const user = await prisma.user.findFirst({
+      where: { stripeCustomerId: customer }
+    })
+
+    if (!user) {
+      throw new Error('User not found for customer ID')
     }
     
     // Find pending orders for this user
     const order = await prisma.order.findFirst({
       where: {
-        userId,
+        userId: user.id,
         status: 'PENDING'
       },
       include: {
@@ -106,7 +116,7 @@ export class StripeService {
     // Create invoice for the order
     await prisma.invoice.create({
       data: {
-        userId,
+        userId: user.id,
         orderId: order.id,
         amount: order.totalAmount,
         status: 'PAID',
@@ -172,6 +182,8 @@ export class StripeService {
           serviceType: item.plan.serviceType,
           configuration: {
             gameType: this.determineGameType(item),
+            nestId: item.configuration.nestId || 1,
+            eggId: item.configuration.eggId || 1,
             ram: item.configuration.ram || 4,
             cpu: item.configuration.cpu || 2,
             disk: item.configuration.disk || 50,
