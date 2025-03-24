@@ -27,9 +27,10 @@
 <script setup>
 const adminLinks = [
   { name: 'Dashboard', path: '/admin', icon: '📊' },
-  { name: 'Pterodactyl', path: '/admin/pterodactyl', icon: '🦖' },
   { name: 'Users', path: '/admin/users', icon: '👤' },
   { name: 'Billing', path: '/admin/billing', icon: '💳' },
+  { name: 'Pterodactyl', path: '/admin/pterodactyl', icon: '🦖' },
+  { name: 'Services', path: '/admin/management/services', icon: '🛠️' },
   { name: 'Data Centers', path: '/admin/management/datacenters', icon: '🏢' },
   { name: 'Hosts', path: '/admin/management/hosts', icon: '🖥️' }
 ];
