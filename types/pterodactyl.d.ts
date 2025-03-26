@@ -56,6 +56,8 @@ declare interface PterodactylServer {
 
 // types/pterodactyl.d.ts
 export interface Node {
+    location_id: number
+    maintenance_mode: any
     id: number;
     attributes: {
         memory: number;

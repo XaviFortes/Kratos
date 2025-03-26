@@ -128,6 +128,18 @@ export class StripeService {
     
     // Provision services for the user
     await this.provisionServices(order)
+
+    // Set service deployment status
+    await prisma.serviceDeployment.updateMany({
+      where: {
+        service: {
+          userId: user.id
+        }
+      },
+      data: {
+        status: 'DEPLOYED'
+      }
+    })
   }
   
   // Handle failed payment
@@ -186,9 +198,9 @@ export class StripeService {
             eggId: item.configuration.eggId || 1,
             ram: item.configuration.ram || 4,
             cpu: item.configuration.cpu || 2,
-            disk: item.configuration.disk || 50,
+            disk: item.configuration.disk || 10,
             slots: item.configuration.slots || 20,
-            location: item.configuration.location || 'eu',
+            location: item.configuration.locationId || 2,
             dedicatedIp: item.configuration.dedicatedIp || false
           }
         })

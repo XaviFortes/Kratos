@@ -14,7 +14,7 @@ export class ServerMonitorService {
         include: { service: true },
         orderBy: { createdAt: 'asc' }
       })
-      
+      if (pendingDeployments.length === 0) return
       console.log(`Found ${pendingDeployments.length} pending deployments`)
       
       for (const deployment of pendingDeployments) {

@@ -14,7 +14,7 @@ interface HostRequirements {
   cpu: number
   memory: number
   disk: number
-  location: string
+  location: number
 }
 
 interface Host {
@@ -34,7 +34,7 @@ export class ProvisioningService {
       cpu: params.configuration.cpu * 100, // Convert cores to % (100% per core)
       memory: params.configuration.ram * 1024, // Convert GB to MB
       disk: params.configuration.disk * 1024, // Convert GB to MB
-      location: String(params.configuration.location || 'eu') // Ensure location is a string
+      location: params.configuration.location
     };
 
     console.log('Resource requirements:', resourceRequirements);
@@ -49,20 +49,22 @@ export class ProvisioningService {
         throw new Error('User not found');
       }
 
-      // 2. Find suitable host - fix the type
-      const host = await this.nodeSelector.findOptimalHost(resourceRequirements) as unknown as Host;
       
-      if (!host) {
-        console.error('No available hosts matching requirements');
-        throw new Error('No available hosts matching requirements');
-      }
 
-      // 3. If game server, handle with Pterodactyl
+      // 2. If game server, handle with Pterodactyl
       if (params.serviceType === 'GAME_SERVER') {
+        const host = await this.nodeSelector.findOptimalNode(resourceRequirements) as unknown as Host;
         return await this.provisionGameServer(params, host.id);
       } else {
         // 4. For other service types
-        return await this.provisionGenericService(params, host.id);
+        // 3. Find suitable host - fix the type
+        // const host = await this.nodeSelector.findOptimalHost(resourceRequirements) as unknown as Host;
+        throw new Error('Service type not supported yet');
+        // if (!host) {
+          // console.error('No available hosts matching requirements');
+          // throw new Error('No available hosts matching requirements');
+        // }
+        // return await this.provisionGenericService(params, host.id);
       }
     } catch (error: unknown) {
       console.error('Provisioning error:', error);

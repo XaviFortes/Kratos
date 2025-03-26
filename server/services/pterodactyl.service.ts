@@ -3,6 +3,7 @@ import type { User, Service } from '@prisma/client'
 import { Allocation, NodeResource, NodeWithLocation, PterodactylServer, ServerCreateParams } from '~/types/pterodactyl'
 import { prisma } from '~/server/lib/prisma'
 import { server } from 'typescript'
+import { NodeSelector } from './NodeSelector'
 
 export class PterodactylService {
   private readonly config = {
@@ -120,44 +121,23 @@ export class PterodactylService {
   
   async findAvailableNodeWithAllocation(location: number, requiredMemory: number, requiredDisk: number): Promise<{ nodeId: number, allocationId: number }> {
     try {
-      // 1. Get all nodes in the selected location
-      const nodes = await this.getNodesByLocation(location);
-    //   console.log('[Pterodactyl] Nodes:', nodes);
+      const nodeSelector = new NodeSelector();
+      const result = await nodeSelector.findOptimalNode({
+        location,
+        memory: requiredMemory,
+        disk: requiredDisk,
+        cpu: 100 // Default to 1 core if not specified elsewhere
+      });
       
-      // 2. Filter and sort nodes
-      const suitableNodes = nodes
-        .filter(node => 
-          !node.maintenance_mode &&
-          this.nodeHasCapacity(node, requiredMemory, requiredDisk)
-        )
-        .sort((a, b) => 
-          this.calculateAvailableResources(b) - this.calculateAvailableResources(a)
-        );
-  
-      if (!suitableNodes.length) {
-        throw new Error(`No available nodes in location "${location}" with sufficient resources`);
-      }
-  
-      // 3. Find first node with available allocations
-      for (const node of suitableNodes) {
-        const allocations = await this.getAvailableAllocations(node.id);
-        if (allocations.length > 0) {
-          return {
-            nodeId: node.id,
-            allocationId: allocations[0].id
-          };
-        }
-      }
-  
-      throw new Error(`No available allocations in location "${location}" nodes`);
+      return result;
     } catch (error) {
-      console.error('Node/allocation selection failed:', {
+      console.error('[Pterodactyl] Node/allocation selection failed:', {
         location,
         requiredMemory,
         requiredDisk,
         error: (error as Error).message
       });
-      throw error;
+      throw new Error(`No available nodes in location "${location}" with sufficient resources: ${(error as Error).message}`);
     }
   }
   

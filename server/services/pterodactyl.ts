@@ -72,6 +72,23 @@ export class PterodactylService {
     }
 
     /**
+     * Get available allocations for a specific node
+     * @param nodeId Node ID
+     * @returns Array of available allocations
+     */
+    async getAvailableAllocations(nodeId: number): Promise<any[]> {
+        const response: { data: { attributes: Allocation }[] } = await $fetch(`${this.config.public.pterodactylUrl}/api/application/nodes/${nodeId}/allocations`, {
+            headers: this.headers
+        });
+        // console.log('Allocations:', response.data);
+        
+        // Filter to only get unassigned allocations
+        return response.data
+            .map((allocation: any) => allocation.attributes)
+            .filter((allocation: any) => !allocation.assigned);
+    }
+
+    /**
      * Update server details
      * @param id Server ID
      * @param data Server details data

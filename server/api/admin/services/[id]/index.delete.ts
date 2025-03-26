@@ -1,8 +1,13 @@
+import { getServerSession } from "#auth";
 import { prisma } from "~/server/lib/prisma";
 import { requireAdminUser } from "~/server/utils/adminAuth";
 
 export default defineEventHandler(async (event) => {
-  await requireAdminUser(event);
+  const session = await getServerSession(event)
+  if (!session?.user?.id) throw createError({ statusCode: 401 })
+    
+  const isAdmin = prisma.user.findFirst({ where: { id: session.user.id, isAdmin: true } })
+  if (!isAdmin) throw createError({ statusCode: 403 })
   
   const id = event.context.params?.id;
   
